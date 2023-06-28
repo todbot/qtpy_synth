@@ -12200,9 +12200,8 @@ Variant with &lt;b&gt;I2C interface&lt;/b&gt;
 <sheets>
 <sheet>
 <plain>
-<text x="175.26" y="30.48" size="2.54" layer="94">Adafruit QT Py</text>
-<text x="175.26" y="25.4" size="2.54" layer="94">http://adafruit.com/products/4600</text>
-<text x="248.92" y="30.48" size="2.54" layer="94">CC 2.5 BY-SA</text>
+<text x="175.26" y="30.48" size="2.54" layer="94">qtpy_synth_proto2a</text>
+<text x="175.26" y="25.4" size="2.54" layer="94">https://github.com/todbot/qtpy_synth</text>
 <text x="218.186" y="171.704" size="1.778" layer="97" rot="MR180">RING2</text>
 <text x="218.186" y="177.8" size="1.778" layer="97" rot="MR180">RING1</text>
 <text x="218.186" y="181.356" size="1.778" layer="97" rot="MR180">GND</text>
@@ -12213,6 +12212,7 @@ Variant with &lt;b&gt;I2C interface&lt;/b&gt;
 <text x="218.186" y="145.034" size="1.778" layer="97">TIP</text>
 <text x="185.42" y="129.54" size="1.778" layer="97">Works with cell phone earphones &amp;
 stereo cables. Does not work w/ mono cables</text>
+<text x="231.14" y="17.78" size="2.54" layer="94">@todbot - Tod Kurt</text>
 </plain>
 <instances>
 <instance part="FRAME1" gate="G$1" x="0" y="0" smashed="yes"/>
@@ -12601,21 +12601,18 @@ stereo cables. Does not work w/ mono cables</text>
 </net>
 <net name="AUDIO_OUT" class="0">
 <segment>
-<pinref part="R9" gate="G$1" pin="1"/>
-<pinref part="C3" gate="G$1" pin="2"/>
-<wire x1="185.42" y1="142.24" x2="175.26" y2="142.24" width="0.1524" layer="91"/>
-<wire x1="172.72" y1="142.24" x2="175.26" y2="142.24" width="0.1524" layer="91"/>
-<junction x="175.26" y="142.24"/>
-</segment>
-<segment>
 <pinref part="J2" gate="G$1" pin="RING1"/>
 <wire x1="203.2" y1="142.24" x2="198.12" y2="142.24" width="0.1524" layer="91"/>
 <wire x1="198.12" y1="142.24" x2="198.12" y2="147.32" width="0.1524" layer="91"/>
-<junction x="198.12" y="142.24"/>
 <label x="182.88" y="142.24" size="1.778" layer="95"/>
 <pinref part="J2" gate="G$1" pin="TIP"/>
 <wire x1="203.2" y1="147.32" x2="198.12" y2="147.32" width="0.1524" layer="91"/>
-<wire x1="198.12" y1="142.24" x2="182.88" y2="142.24" width="0.1524" layer="91"/>
+<pinref part="R9" gate="G$1" pin="1"/>
+<pinref part="C3" gate="G$1" pin="2"/>
+<wire x1="172.72" y1="142.24" x2="175.26" y2="142.24" width="0.1524" layer="91"/>
+<wire x1="198.12" y1="142.24" x2="175.26" y2="142.24" width="0.1524" layer="91"/>
+<junction x="198.12" y="142.24"/>
+<junction x="175.26" y="142.24"/>
 </segment>
 </net>
 <net name="POTB" class="0">
@@ -12735,23 +12732,7 @@ stereo cables. Does not work w/ mono cables</text>
 </sheet>
 </sheets>
 <errors>
-<approved hash="104,1,63.5,76.2,IC2P,VCC,+5V,,,"/>
-<approved hash="106,1,116.84,109.22,3V,,,,,"/>
-<approved hash="106,1,45.72,114.3,A0,,,,,"/>
-<approved hash="106,1,45.72,111.76,A1,,,,,"/>
-<approved hash="106,1,45.72,109.22,A2,,,,,"/>
-<approved hash="106,1,116.84,104.14,MISO,,,,,"/>
-<approved hash="106,1,45.72,104.14,SDA,,,,,"/>
 <approved hash="113,1,139.596,107.846,FRAME1,,,,,"/>
-<approved hash="113,1,45.4829,108.081,JP1,,,,,"/>
-<approved hash="113,1,117.077,105.279,JP3,,,,,"/>
-<approved hash="113,1,40.4029,67.1788,JP2,,,,,"/>
-<approved hash="113,1,30.48,69.7569,SJ1,,,,,"/>
-<approved hash="113,1,93.98,97.8831,SJ2,,,,,"/>
-<approved hash="113,1,66.04,100.237,SJ3,,,,,"/>
-<approved hash="113,1,93.98,100.423,SJ4,,,,,"/>
-<approved hash="113,1,93.98,105.503,SJ5,,,,,"/>
-<approved hash="113,1,66.04,102.777,SJ6,,,,,"/>
 </errors>
 </schematic>
 </drawing>
