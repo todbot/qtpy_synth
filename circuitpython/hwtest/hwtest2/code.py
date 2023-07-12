@@ -103,4 +103,5 @@ async def main():  # Don't forget the async!
     task2 = asyncio.create_task(key_handler())
     await asyncio.gather(task1,task2)
 
+print("hello hw test2.py")
 asyncio.run(main())
