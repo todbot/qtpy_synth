@@ -8,6 +8,7 @@ class Waves:
     SINE = 'sine'
     SQUARE = 'square'
     SAW = 'saw'
+    TRIANGLE = 'triangle'
 
     def make_waveform(waveid):
         if waveid=='sine':
@@ -16,20 +17,26 @@ class Waves:
             return Waves.make_square()
         elif waveid=='saw':
             return Waves.make_saw()
+        elif waveid=='triangle':
+            return Waves.make_triangle()
         else:
             print("unknown wave type", waveid)
 
     def make_sine(size=512, volume=30000):
         return np.array(np.sin(np.linspace(0, 2*np.pi, size, endpoint=False)) * volume, dtype=np.int16)
 
-    def make_square(size=512, volume=32768):
-        np.concatenate((np.ones(size//2, dtype=np.int16) * volume,
-                        np.ones(size//2, dtype=np.int16) * -volume))
+    def make_square(size=512, volume=30000):
+        return np.concatenate((np.ones(size//2, dtype=np.int16) * volume,
+                               np.ones(size//2, dtype=np.int16) * -volume))
 
-    def make_saw(size=512, volume=32768):
+    def make_triangle(size=512, volume=30000):
+        return np.concatenate(np.linspace(-volume, volume, num=size//2, dtype=np.int16),
+                              np.linspace(volume, -volume, num=size//2, dtype=np.int16))
+
+    def make_saw(size=512, volume=30000):
         return Waves.make_ramp_down(size,volume)
 
-    def make_ramp_down(size=512, volume=32768):
+    def make_ramp_down(size=512, volume=30000):
         return np.linspace(volume, -volume, num=size, dtype=np.int16)
 
 
@@ -101,7 +108,10 @@ class Instrument():
             self.voices.pop(midi_note)  # FIXME: need to run filter after release cycle
 
 
+
 class PolyTwoOsc(Instrument):
+    #Voice = namedtuple("Voice", "osc1 osc2 filt_env amp_env")
+
     """
     This is a two-oscillator per voice subtractive synth patch
     with a low-pass filter w/ filter envelope and an amplitude envelope
@@ -113,40 +123,49 @@ class PolyTwoOsc(Instrument):
     def load_patch(self, patch):
         self.patch = patch
         self.waveform = Waves.make_waveform( patch.waveform )
-        #self.filt_env_amount = 0.5
 
     # oh wait, this would make it paraphonic
     # we need filter envelope per note (not per voice tho)
     def update(self):
-        filt_q = patch.filt_q
-        for i in range(len(self.voices)):
-            (osc1,osc2) = voices[i]
-            filt_f = patch.filt_f * synth.blocks[i].value
-            filt = synthio.low_pass_filter( filt_f,filt_q )
+        filt_q = self.patch.filt_q
+        for (osc1,osc2,filt_env,amp_env) in self.voices.values():
+            filt_f = self.patch.filt_f * filt_env.value
+            print(filt_f)
+            filt = self.synth.low_pass_filter( filt_f,filt_q )
             osc1.filter = filt
             osc2.filter = filt
 
-    def note_on(self, midi_note):
-        self.amp_env = patch.amp_env_params.make_env()
-        f = synthio.midi_to_hz(midi_note)
-        osc1 = synthio.Note( frequency=f, waveform=self.waveform, envelope=self.amp_env )
-        osc2 = synthio.Note( frequency=f * detune, waveform=self.waveform, envelope=self.amp_env )
-        voice_num = len(voices)  # length is also position of new voice
-        voices.append( (osc1,osc2) )
-        synth.press( (osc1,osc2) )
-        filt_env = patch.filt_env_params.make_env()
-        synth.blocks.append(filt_env) # not tracked automaticallly by synthio
-        return voice_num  # user must keep track of this for note_off
+    def note_on(self, midi_note, midi_vel=127):
+        amp_env = self.patch.amp_env_params.make_env()
 
-    def note_off(self, note_num):  # FIXME this does not work
-        i = note_num
-        synth.release( voices[note_num] )
-        del(synth.blocks[note_num])
-        del(voices[note_num])
+        #filt_env = self.patch.filt_env_params.make_env()  # synthio.Envelope.value does not exist
+        filt_env = synthio.LFO(once=True, rate=0.3, scale=2, offset=2) # always positve
+
+        f = synthio.midi_to_hz(midi_note)
+        osc1 = synthio.Note( frequency=f, waveform=self.waveform, envelope=amp_env )
+        osc2 = synthio.Note( frequency=f * self.patch.detune, waveform=self.waveform, envelope=amp_env )
+        #voice = PolyTwoOsc.Voice(osc1, osc2, filt_env, amp_env)
+
+        self.voices[midi_note] = (osc1, osc2, filt_env, amp_env)
+        self.synth.press( (osc1,osc2) )
+        self.synth.blocks.append(filt_env) # not tracked automaticallly by synthio
+
+    def note_off(self, midi_note, midi_vel=0):
+        (osc1,osc2,filt_env,amp_env) = self.voices.get(midi_note, None)
+        if osc1:
+            self.synth.release( (osc1,osc2) )
+            self.voices.pop(midi_note)  # FIXME: let filter run on release, check amp_env?
 
     def adjust_filter(filt_f, filt_q):
         self.filt_f = filt_f
         self.filt_q = filt_q
+
+
+
+
+
+
+
 
     #def amp_ar(self, attack_time, release_time):
     #    pass
