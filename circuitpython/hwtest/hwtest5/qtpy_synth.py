@@ -42,6 +42,8 @@ class QTPySynth():
         self.touches = []   # for debouncer
         for pin in (board.A3, board.A2, board.MISO, board.SCK):
            touchin = touchio.TouchIn(pin)
+           # noise protection (wiggle potA causes touch triggers?)
+           touchin.threshold = int(touchin.threshold * 1.2)
            self.touchins.append(touchin)
            self.touches.append( Debouncer(touchin) )
 
@@ -63,12 +65,12 @@ class QTPySynth():
 
         self.cfg = QTPySynthConfig()
 
-    def check_key(self):
+    def check_key(self, press_func, release_func=None):
         if key := self.keys.events.get():
             if key.pressed:
-                self.led.fill(0xffffff)
-            if key.released:
-                self.led.fill(0)
+                press_func()
+            if key.released and release_func:
+                release_func()
 
     def read_pots(self):
         filt = 0.5
@@ -116,8 +118,8 @@ class QTPySynth():
         self.display.root_group = disp_group
 
         lfilt_type = label.Label(terminalio.FONT, text=self.cfg.filter_type, x=5,y=5)
-        lfreq_val  = label.Label(terminalio.FONT, text=str(self.cfg.filter_f), x=30,y=5)
-        lfreq_q  = label.Label(terminalio.FONT, text=str(self.cfg.filter_q), x=60,y=5)
+        lfreq_val  = label.Label(terminalio.FONT, text=str(self.cfg.filter_f), x=30,y=15, scale=2)
+        lfreq_q  = label.Label(terminalio.FONT, text=str(self.cfg.filter_q), x=90,y=15, scale=2)
 
         self.disp_filter_info = displayio.Group()
         for l in (lfilt_type, lfreq_val, lfreq_q):
@@ -139,4 +141,4 @@ class QTPySynth():
 
         if q_str != self.disp_filter_info[2].text:
             self.disp_filter_info[2].text = q_str
-            print("edit q", q_str)
+            #print("edit q", q_str)

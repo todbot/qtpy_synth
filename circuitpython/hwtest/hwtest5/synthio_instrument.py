@@ -52,7 +52,7 @@ class LFOParams:
 class EnvParams():
     """
     """
-    def __init__(self, attack_time=0.1, decay_time=0.01, release_time=0.3, attack_level=1, sustain_level=1):
+    def __init__(self, attack_time=0.1, decay_time=0.01, release_time=0.2, attack_level=1, sustain_level=1):
         self.attack_time = attack_time
         self.decay_time = decay_time
         self.release_time = release_time
@@ -71,14 +71,14 @@ class Patch:
     """ Patch is a serializable data structure for the Instrument
     """
     def __init__(self, waveform='saw', detune=1.01, filt_f=4000, filt_q=1.2, filt_env_amount=0.5,
-                 filt_env_params=EnvParams(), amp_env_params=EnvParams()):
+                 filt_env_params=None, amp_env_params=None):
         self.waveform = waveform
         self.detune = detune
         self.filt_f = filt_f
         self.filt_q = filt_q
         #self.filt_env_amount = filt_env_amount
-        self.filt_env_params = filt_env_params
-        self.amp_env_params = amp_env_params
+        self.filt_env_params = filt_env_params or EnvParams()
+        self.amp_env_params = amp_env_params or EnvParams()
 
 
 # not to be instantiated just an example
@@ -129,7 +129,7 @@ class PolyTwoOsc(Instrument):
     def update(self):
         filt_q = self.patch.filt_q
         for (osc1,osc2,filt_env,amp_env) in self.voices.values():
-            filt_f = self.patch.filt_f * filt_env.value
+            filt_f = max(self.patch.filt_f * filt_env.value, 40) # filter unstable <30Hz?
             print(filt_f)
             filt = self.synth.low_pass_filter( filt_f,filt_q )
             osc1.filter = filt
@@ -139,7 +139,7 @@ class PolyTwoOsc(Instrument):
         amp_env = self.patch.amp_env_params.make_env()
 
         #filt_env = self.patch.filt_env_params.make_env()  # synthio.Envelope.value does not exist
-        filt_env = synthio.LFO(once=True, rate=0.3, scale=2, offset=2) # always positve
+        filt_env = synthio.LFO(once=True, scale=2, offset=2, rate=self.patch.filt_env_params.attack_time, ) # always positve
 
         f = synthio.midi_to_hz(midi_note)
         osc1 = synthio.Note( frequency=f, waveform=self.waveform, envelope=amp_env )
@@ -149,6 +149,7 @@ class PolyTwoOsc(Instrument):
         self.voices[midi_note] = (osc1, osc2, filt_env, amp_env)
         self.synth.press( (osc1,osc2) )
         self.synth.blocks.append(filt_env) # not tracked automaticallly by synthio
+        print("filt_env_param:", self.patch.filt_env_params)
 
     def note_off(self, midi_note, midi_vel=0):
         (osc1,osc2,filt_env,amp_env) = self.voices.get(midi_note, None)
@@ -159,31 +160,3 @@ class PolyTwoOsc(Instrument):
     def adjust_filter(filt_f, filt_q):
         self.filt_f = filt_f
         self.filt_q = filt_q
-
-
-
-
-
-
-
-
-    #def amp_ar(self, attack_time, release_time):
-    #    pass
-
-    # class lfoparams
-    # def __init2__(self, **kwargs):
-    #     valid_keys = ("rate", "scale", "offset", "once")
-    #     for k in valid_keys:
-    #         setattr(self, k, kwargs.get(key))
-
-
-    #patch_params = "waveform detune filt_f filt_q filt_env_amount filt_env_params amp_env_params"
-    #Patch = namedtuple("Patch", patch_params)
-
-    """
-    Envelope can be either a `synthio.Envelope` or a `synthio.LFO` (in looping or once mode)
-    So in addtion to ADSR values, need LFO values too
-    e.g.
-    [LFO(waveform=None, rate=1.0, scale=1.0, offset=0.0, phase_offset=0.0, once=False, interpolate=True),
-    Envelope(attack_time=0.1, decay_time=0.05, release_time=0.2, attack_level=1.0, sustain_level=0.8)]
-    """
