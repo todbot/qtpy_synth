@@ -37,54 +37,86 @@ from qtpy_synth import QTPySynth
 
 from synthio_instrument import PolyTwoOsc, Patch, Instrument
 
-qts = QTPySynth()
-qts.display_setup()
-
 patch1 = Patch()
 patch2 = Patch()
+patch3 = Patch()
+patch4 = Patch()
+patches = (patch1, patch2, patch3, patch4)
+#patch_i = 2
 
 patch1.filt_env_params.attack_time = 0.5
+patch1.amp_env_params.attack_time = 0.01
+
+patch2.filt_type = 'hp'
 patch2.waveform = 'square'
 patch2.detune=1.01
-patch1.amp_env_params.attack_time = 1.5
-patch2.filt_env_params.attack_time = 0.0 # turn off filter
+patch2.filt_env_params.attack_time = 0.0 # turn off filter  FIXME
 patch2.amp_env_params.release_time = 1.0
 
+patch3.waveformB = 'square'  # show off wavemixing
+
 print(patch1.amp_env_params)
-print(patch2.amp_env_params)  # why is th
+print(patch2.amp_env_params)
 print("------")
 
-#inst = Instrument(qts.synth)  # to test things out
-inst = PolyTwoOsc(qts.synth, patch2)
+qts = QTPySynth(patch3)
+qts.display_setup()
+
+#inst = Instrument(qts.synth)  # basic instrument to test things out
+inst = PolyTwoOsc(qts.synth, patch3)
 
 midi_notes = [40, 48, 52, 60] # can be float
 
 def map_range(s, a1, a2, b1, b2):  return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
 
+# fixme: put these in qtpy_synth.py
+knob_mode = 1  # 0=frequency, 1=wavemix
+key_held = False
+key_with_touch = False
+
+#  UI: key press+release == change what knobs are editing
+#      key hold + touch = load patch 1,2,3,4
 def touch_on(i):
+    global key_with_touch
     print("touch_on:",i)
-    qts.led.fill(0xff00ff)
-    midi_note = midi_notes[i]
-    inst.note_on(midi_note)
+    if key_held:  # load a patch
+        inst.load_patch(patches[i])
+        qts.cfg = patches[i]
+        qts.display_update()
+        key_with_touch = True
+    else:  # trigger a note
+        qts.led.fill(0xff00ff)
+        midi_note = midi_notes[i]
+        inst.note_on(midi_note)
 
 def touch_off(i):
+    global key_with_touch
     print("touch_off:",i)
-    qts.led.fill(0)
-    midi_note = midi_notes[i]
-    inst.note_off(midi_note)
-    print( inst.voices )
+    if key_with_touch:
+        key_with_touch = False
+    else:
+        qts.led.fill(0)
+        midi_note = midi_notes[i]
+        inst.note_off(midi_note)
+        #print( inst.voices )
 
 def key_press():
+    global key_held
     print("keypress")
-    qts.led.fill(0xffffff)
-    if inst.patch == patch1:
-        inst.load_patch(patch2)
-    elif inst.patch == patch2:
-        inst.load_patch(patch1)
+    key_held = True
+    #qts.led.fill(0xffffff)
 
 def key_release():
+    global key_held, knob_mode
     print("keyrelease")
-    qts.led.fill(0)
+    key_held = False
+    if key_with_touch:
+        pass
+    else:  # or change what knobs do
+        knob_mode = (knob_mode + 1) % 2
+        print("knob mode:",knob_mode)
+
+
 
 async def instrument_updater():
     while True:
@@ -101,17 +133,26 @@ async def display_updater():
         await asyncio.sleep(0.1)
 
 async def input_handler():
+
     while True:
         qts.check_key( key_press, key_release )
         qts.check_touch( touch_on, touch_off ) #, touch_hold )
 
         (knobA, knobB) = qts.read_pots()
 
-        inst.patch.filt_f = map_range( knobA, 0,65535, 30, 4000)
-        inst.patch.filt_q = map_range( knobB, 0,65535, 0.1, 3)
+        if knob_mode == 0:
+            inst.patch.filt_f = map_range( knobA, 0,65535, 30, 4000)
+            inst.patch.filt_q = map_range( knobB, 0,65535, 0.1, 3)
 
-        qts.cfg.filter_f = inst.patch.filt_f
-        qts.cfg.filter_q = inst.patch.filt_q
+            #qts.cfg.filt_f = inst.patch.filt_f
+            #qts.cfg.filt_q = inst.patch.filt_q
+
+        elif knob_mode == 1:
+            inst.patch.wave_mix = map_range( knobA, 0,65535, 0,1)
+            #qts.cfg.wave_mix = inst.patch.wave_mix*10  # FIXME YO
+
+        else:
+            print("wat")
 
         await asyncio.sleep(0.01)
 

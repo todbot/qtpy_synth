@@ -1,3 +1,5 @@
+# UI fixme:
+# knob "pickup" vs knob "catchup"
 
 import board, busio
 import analogio, keypad
@@ -21,15 +23,8 @@ DW,DH = 128, 64  # display width/height
 # note: we're hanging on to some of the interstitial objects like 'i2c' & 'display_bus'
 # even though we shouldn't, because I think the gc will collect it unless we hold on to it
 
-class QTPySynthConfig():
-    def __init__(self):
-        self.filter_f = 2000
-        self.filter_q = 1.2
-        self.filter_type = 'lpf'
-
-
 class QTPySynth():
-    def __init__(self):
+    def __init__(self, patch=None):
 
         self.led = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.1)
         self.keys = keypad.Keys( pins=(board.TX,),  value_when_pressed=False )
@@ -43,7 +38,7 @@ class QTPySynth():
         for pin in (board.A3, board.A2, board.MISO, board.SCK):
            touchin = touchio.TouchIn(pin)
            # noise protection (wiggle potA causes touch triggers?)
-           touchin.threshold = int(touchin.threshold * 1.2)
+           touchin.threshold = int(touchin.threshold * 1.1)
            self.touchins.append(touchin)
            self.touches.append( Debouncer(touchin) )
 
@@ -63,7 +58,7 @@ class QTPySynth():
         self.mixer.voice[0].level = 0.35 # turn down the volume a bit since this can get loud
         self.mixer.voice[0].play(self.synth)
 
-        self.cfg = QTPySynthConfig()
+        self.cfg = patch
 
     def check_key(self, press_func, release_func=None):
         if key := self.keys.events.get():
@@ -99,46 +94,46 @@ class QTPySynth():
                 if hold_func:
                     hold_func(i, v)
 
-    def make_filter(self, cfg=None):
-        if not cfg: cfg = self.cfg
-        if cfg.filter_type == 'lpf':
-            filter = self.synth.low_pass_filter(cfg.filter_f, cfg.filter_q)
-        else:
-            print("unknown filter type", self.filter_type)
-        return filter
-
-    def update_filter(self, filter_type, filter_f, filter_q):
-        self.cfg.filter_type = filter_type
-        self.cfg.filter_f = filter_f
-        self.cfg.filter_q = filter_q
-
-
     def display_setup(self):
         disp_group = displayio.Group()
         self.display.root_group = disp_group
 
-        lfilt_type = label.Label(terminalio.FONT, text=self.cfg.filter_type, x=5,y=5)
-        lfreq_val  = label.Label(terminalio.FONT, text=str(self.cfg.filter_f), x=30,y=15, scale=2)
-        lfreq_q  = label.Label(terminalio.FONT, text=str(self.cfg.filter_q), x=90,y=15, scale=2)
+        lfilt_type = label.Label(terminalio.FONT, text=self.cfg.filt_type, x=5,y=5)
+        lfilt_f  = label.Label(terminalio.FONT, text=str(self.cfg.filt_f), x=30,y=5, scale=1)
+        lfilt_q  = label.Label(terminalio.FONT, text=str(self.cfg.filt_q), x=90,y=5, scale=1)
 
-        self.disp_filter_info = displayio.Group()
-        for l in (lfilt_type, lfreq_val, lfreq_q):
-            self.disp_filter_info.append(l)
-        disp_group.append(self.disp_filter_info)
+        lwaveA = label.Label(terminalio.FONT, text=self.cfg.waveform, x=5,y=25)
+        lwaveB  = label.Label(terminalio.FONT, text=str(self.cfg.waveformB), x=30,y=25, scale=1)
+        lwave_mix  = label.Label(terminalio.FONT, text=str(self.cfg.wave_mix), x=90,y=25, scale=1)
+
+        self.disp_filt_info = displayio.Group()
+        for l in (lfilt_type, lfilt_f, lfilt_q):
+            self.disp_filt_info.append(l)
+        disp_group.append(self.disp_filt_info)
+
+        self.disp_wave_info = displayio.Group()
+        for l in (lwaveA, lwaveB, lwave_mix):
+            self.disp_wave_info.append(l)
+        disp_group.append(self.disp_wave_info)
 
     def display_update(self):
         self.display_update_filter()
+        self.display_update_wave()
+
+    def display_update_wave(self):
+        self.disp_wave_info[2].text = "%.2f" % self.cfg.wave_mix
 
     def display_update_filter(self):
-        f_str = "%4d" % self.cfg.filter_f
-        q_str = "%1.1f" % self.cfg.filter_q
+        """Differential update to minimize displaybus traffic"""
+        f_str = "%4d" % self.cfg.filt_f
+        q_str = "%1.1f" % self.cfg.filt_q
 
-        if self.cfg.filter_type != self.disp_filter_info[0].text:
-            self.disp_filter_info[0].text = self.cfg.filter_type
+        if self.cfg.filt_type != self.disp_filt_info[0].text:
+            self.disp_filt_info[0].text = self.cfg.filt_type
 
-        if f_str != self.disp_filter_info[1].text:
-            self.disp_filter_info[1].text = f_str
+        if f_str != self.disp_filt_info[1].text:
+            self.disp_filt_info[1].text = f_str
 
-        if q_str != self.disp_filter_info[2].text:
-            self.disp_filter_info[2].text = q_str
+        if q_str != self.disp_filt_info[2].text:
+            self.disp_filt_info[2].text = q_str
             #print("edit q", q_str)

@@ -4,7 +4,15 @@ import synthio
 from collections import namedtuple
 import ulab.numpy as np
 
+# mix between values a and b, works with numpy arrays too,  t ranges 0-1
+def lerp(a, b, t):  return (1-t)*a + t*b
+
+
 class Waves:
+    """
+    Generate waveforms for either oscillator or LFO use
+    """
+
     SINE = 'sine'
     SQUARE = 'square'
     SAW = 'saw'
@@ -19,6 +27,10 @@ class Waves:
             return Waves.make_saw(size,volume)
         elif waveid=='triangle':
             return Waves.make_triangle(size,volume)
+        elif waveid=='silence':
+            return Waves.make_silence(size)
+        elif waveid=='noise':
+            return Waves.make_noise(size,volume)
         else:
             print("unknown wave type", waveid)
 
@@ -34,20 +46,44 @@ class Waves:
                               np.linspace(volume, -volume, num=size//2, dtype=np.int16)))
 
     def make_saw(size, volume):
-        return Waves.make_ramp_down(size,volume)
+        return Waves.make_saw_down(size,volume)
 
-    def make_ramp_down(size, volume):
+    def make_saw_down(size, volume):
         return np.linspace(volume, -volume, num=size, dtype=np.int16)
+
+    def make_saw_up(size, volume):
+        return np.linspace(-volume, volume, num=size, dtype=np.int16)
+
+    def make_silence(size):
+        return np.zeros(size, dtype=np.int16)
+
+    def make_noise(size,volume):
+        pass
+
+    def wav(filepath):
+        import adafruit_wave
+        with adafruit_wave.open(filename) as w:
+            if w.getsampwidth() != 2 or w.getnchannels() != 1:
+                raise ValueError("unsupported format")
+            n = w.getnframes() if n==0 else n
+            w.setpos(start)
+            return np.frombuffer(w.readframes(n), dtype=np.int16)
 
 
 class LFOParams:
     """
     """
-    def __init__(self, rate=None, scale=None, offset=None, once=False):
+    def __init__(self, rate=None, scale=None, offset=None, once=False, waveform=None):
         self.rate = rate
         self.scale = scale
         self.offset = offset
         self.once = once
+        self.waveform = waveform
+
+    def make_lfo(self):
+        return synthio.LFO(rate=self.rate, once=self.once,
+                           scale=self.scale, offset=self.offset,
+                           waveform=self.waveform)
 
 class EnvParams():
     """
@@ -70,10 +106,14 @@ class EnvParams():
 class Patch:
     """ Patch is a serializable data structure for the Instrument
     """
-    def __init__(self, waveform='saw', detune=1.01, filt_f=4000, filt_q=1.2, filt_env_amount=0.5,
+    def __init__(self, waveform='saw', detune=1.01,
+                 filt_type='lp', filt_f=8000, filt_q=1.2, filt_env_amount=0.5,
                  filt_env_params=None, amp_env_params=None):
         self.waveform = waveform
+        self.waveformB = None
+        self.wave_mix = 0.0  # 0 = waveform, 1 = waveformB
         self.detune = detune
+        self.filt_type = filt_type   # allowed values: 'lp', 'bp', or 'hp'
         self.filt_f = filt_f
         self.filt_q = filt_q
         #self.filt_env_amount = filt_env_amount
@@ -122,26 +162,51 @@ class PolyTwoOsc(Instrument):
 
     def load_patch(self, patch):
         self.patch = patch
-        self.waveform = Waves.make_waveform( patch.waveform )
+        self.waveform = Waves.make_waveform('silence')  # this will get overwritten with wavemixed version
+        self.waveformA = Waves.make_waveform( patch.waveform )
+        self.waveformB = None
+        if patch.waveformB:
+            self.waveformB = Waves.make_waveform( patch.waveformB )
+        else:
+            self.waveform = self.waveformA  # FIXME:
+
+        print(self.waveformA)
+        print(self.waveformB)
         self.filt_env_wave = Waves.make_triangle(size=16, volume=32676)
 
-    # oh wait, this would make it paraphonic
-    # we need filter envelope per note (not per voice tho)
     def update(self):
         for (osc1,osc2,filt_env,amp_env) in self.voices.values():
+
+            # wavetable mixing
+            if self.waveformB:
+                osc1.waveform[:] = lerp(self.waveformA, self.waveformB, self.patch.wave_mix)
+                osc2.waveform[:] = lerp(self.waveformA, self.waveformB, self.patch.wave_mix)
+
             # prevent filter instability around note frequency
             # must do this for each voice
             filt_q = self.patch.filt_q
             if self.patch.filt_f / osc1.frequency < 1.2:
                 filt_q = filt_q / 2
+
             #filt_f = max(self.patch.filt_f * filt_env.value, osc1.frequency*0.75) # filter unstable <oscfreq?
             #filt_f = max(self.patch.filt_f * filt_env.value, 0) # filter unstable <100?
             filt_mod = 0
-            if self.patch.filt_env_params.attack_time>0:
-                filt_mod = max(0, 0.5 * 8000 * (filt_env.value/2))  # 8k/2 = max freq, 0.5 = filtermod amt
-            filt_f = self.patch.filt_f + filt_mod
-            print("%.1f %.1f %.1f %.1f" % (osc1.frequency, filt_f, self.patch.filt_f, filt_q))
-            filt = self.synth.low_pass_filter( filt_f,filt_q )
+            filt_f = 0
+            filt = None
+
+            if self.patch.filt_type == 'lp':
+                if self.patch.filt_env_params.attack_time > 0:
+                    filt_mod = max(0, 0.5 * 8000 * (filt_env.value/2))  # 8k/2 = max freq, 0.5 = filtermod amt
+                    filt_f = self.patch.filt_f + filt_mod
+                    filt = self.synth.low_pass_filter( filt_f,filt_q )
+
+            elif self.patch.filt_type == 'hp':
+                    filt_mod = max(0, 0.5 * 8000 * (filt_env.value/2))  # 8k/2 = max freq, 0.5 = filtermod amt
+                    filt_f = self.patch.filt_f + filt_mod
+                    filt = self.synth.high_pass_filter( filt_f,filt_q )
+
+            print("%s: %.1f %.1f %.1f %.1f" % (self.patch.filt_type, osc1.frequency,
+                                               filt_f, self.patch.filt_f, filt_q))
             osc1.filter = filt
             osc2.filter = filt
 
