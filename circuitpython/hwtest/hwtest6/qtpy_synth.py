@@ -104,7 +104,8 @@ class QTPySynth():
 
         lwaveA = label.Label(terminalio.FONT, text=self.cfg.waveform, x=5,y=25)
         lwaveB  = label.Label(terminalio.FONT, text=str(self.cfg.waveformB), x=30,y=25, scale=1)
-        lwave_mix  = label.Label(terminalio.FONT, text=str(self.cfg.wave_mix), x=90,y=25, scale=1)
+        lwave_mix  = label.Label(terminalio.FONT, text=str(self.cfg.wave_mix), x=60,y=25, scale=1)
+        ldetune  = label.Label(terminalio.FONT, text=str(self.cfg.wave_mix), x=95,y=25, scale=1)
 
         self.disp_filt_info = displayio.Group()
         for l in (lfilt_type, lfilt_f, lfilt_q):
@@ -112,7 +113,7 @@ class QTPySynth():
         disp_group.append(self.disp_filt_info)
 
         self.disp_wave_info = displayio.Group()
-        for l in (lwaveA, lwaveB, lwave_mix):
+        for l in (lwaveA, lwaveB, lwave_mix, ldetune):
             self.disp_wave_info.append(l)
         disp_group.append(self.disp_wave_info)
 
@@ -121,7 +122,10 @@ class QTPySynth():
         self.display_update_wave()
 
     def display_update_wave(self):
+        self.disp_wave_info[0].text = '%3s' % self.cfg.waveform
+        self.disp_wave_info[1].text = '%3s' % self.cfg.waveformB
         self.disp_wave_info[2].text = "%.2f" % self.cfg.wave_mix
+        self.disp_wave_info[3].text = "%.3f" % (self.cfg.detune-1)
 
     def display_update_filter(self):
         """Differential update to minimize displaybus traffic"""

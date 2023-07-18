@@ -144,12 +144,11 @@ async def input_handler():
             inst.patch.filt_f = map_range( knobA, 0,65535, 30, 4000)
             inst.patch.filt_q = map_range( knobB, 0,65535, 0.1, 3)
 
-            #qts.cfg.filt_f = inst.patch.filt_f
-            #qts.cfg.filt_q = inst.patch.filt_q
-
         elif knob_mode == 1:
             inst.patch.wave_mix = map_range( knobA, 0,65535, 0,1)
-            #qts.cfg.wave_mix = inst.patch.wave_mix*10  # FIXME YO
+            inst.patch.detune = map_range( knobB, 0,65535, 1, 2)
+            # fixme how to do held-note detune
+            inst.redetune()
 
         else:
             print("wat")
@@ -157,7 +156,7 @@ async def input_handler():
         await asyncio.sleep(0.01)
 
 
-print("qtpy_synth hwtest5 ready")
+print("qtpy_synth hwtest6 ready")
 
 async def main():
     task1 = asyncio.create_task(display_updater())

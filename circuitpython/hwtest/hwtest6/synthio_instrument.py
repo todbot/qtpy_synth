@@ -228,6 +228,10 @@ class PolyTwoOsc(Instrument):
         self.synth.blocks.append(filt_env) # not tracked automaticallly by synthio
         #print("filt_env_param:", self.patch.filt_env_params)
 
+    def redetune(self):
+        for (osc1,osc2,filt_env,amp_env) in self.voices.values():
+            osc2.frequency = osc1.frequency * self.patch.detune
+
     def note_off(self, midi_note, midi_vel=0):
         (osc1,osc2,filt_env,amp_env) = self.voices.get(midi_note, None)
         if osc1:
