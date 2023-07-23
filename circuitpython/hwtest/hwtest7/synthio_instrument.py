@@ -105,7 +105,7 @@ class Wavetable:
     at wave_pos and wave_pos+1.
     """
 
-    def __init__(self, filepath, size=256, in_memory=True):
+    def __init__(self, filepath, size=256, in_memory=False):
         self.filepath = filepath
         """Sample size of each wave in the table"""
         self.size = size
