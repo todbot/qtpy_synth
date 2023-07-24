@@ -155,13 +155,11 @@ async def input_handler():
             wave_mix = map_range( knobB, 0,65535, 0, 1)
 
             wave_select = qts.wave_selects[ int(wave_select_pos) ]
-            #print("wave_select:", wave_select, "inst:", inst.patch.wave_select(), wave_mix, inst.patch==qts.patch)
-            #print("wave_mix:", wave_mix, inst.patch==qts.patch)
 
             if inst.patch.wave_select() != wave_select:
                 print("reloading patch!")
                 inst.patch.set_wave_select( wave_select )
-                inst.load_patch( inst.patch )
+                inst.reload_patch()
 
             # Hmmm, should this be in qts or inst?
             #qts.set_wave_select_pos( int(wave_select_pos) )

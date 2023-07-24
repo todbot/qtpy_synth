@@ -298,6 +298,11 @@ class PolyTwoOsc(Instrument):
 
         self.filt_env_wave = Waves.lfo_triangle()
 
+    def reload_patch(self):
+        self.note_off_all()
+        self.synth.blocks.clear()  # clear out global wavetable LFOs (if any)
+        self.load_patch(self.patch)
+
     def update(self):
         for (osc1,osc2,filt_env,amp_env) in self.voices.values():
 
@@ -368,17 +373,24 @@ class PolyTwoOsc(Instrument):
         self.synth.blocks.append(filt_env) # not tracked automaticallly by synthio
 
     def note_off(self, midi_note, midi_vel=0):
-        (osc1,osc2,filt_env,amp_env) = self.voices.get(midi_note, None)
-        if osc1:
+        print("note_off:", midi_note)
+        (osc1,osc2,filt_env,amp_env) = self.voices.get(midi_note, (None,None,None,None)) # FIXME
+        print("note_off:",osc1)
+        if osc1:  # why this check? in case user tries to note_off a non-existant note
             self.synth.release( (osc1,osc2) )
             self.voices.pop(midi_note)  # FIXME: let filter run on release, check amp_env?
             self.synth.blocks.remove(filt_env)  # FIXME: figure out how to release after note is done
-        print(self.synth.blocks)
+        print("note_off: blocks:", self.synth.blocks)
+
+    def note_off_all(self):
+        for n in self.voices.keys():
+            print("note_off_all:",n)
+            self.note_off(n)
 
     def redetune(self):
         for (osc1,osc2,filt_env,amp_env) in self.voices.values():
             osc2.frequency = osc1.frequency * self.patch.detune
 
-    def adjust_filter(filt_f, filt_q):
-        self.filt_f = filt_f
-        self.filt_q = filt_q
+    # def adjust_filter(filt_f, filt_q):
+    #     self.filt_f = filt_f
+    #     self.filt_q = filt_q
