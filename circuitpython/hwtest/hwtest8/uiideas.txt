@@ -1,0 +1,55 @@
+#
+#
+# UI Ideas:
+#  - touch buttons
+#    - press to trigger note
+#    - hold to enable setting of button params, edit with potA, potB, sw
+#      - what about holding multiple  (maybe do not allow)
+#    - press hard for filter mod?
+#  - pots
+#    - if no button press, changes global param, like filter, res
+#
+#  - knob UI sets:
+#
+#    param sets
+#    1. filter type + filter freq
+#    2. osc detune + filter res
+#    3. wave select (as below) + wave_mix
+#    4. atk / rls
+#
+#    or:
+#    1. wave select (saw/tri/wtb + fname) + wave_mix
+#    2. osc detune + wave_mix_lfo
+#    3a. filter type + filter freq
+#    3b. filter res + filter_env_amount
+#    4. atk / rls
+#
+#    x. osc/wtb e | wave saw/squ/tri
+#       - waveA squ/tri/saw + wave_mix
+#         (turning A goes : Asaw->None, Asaw->Bsqu, Asaw->Btri, Asqu->BNon, Asqu->Btri, Atri->None
+#
+#    x turn knobA choices:
+#       - osc: A saw / B tri
+#         osc: A saw / B squ
+#         osc: A saw / B sin
+#         osc: A squ / B tri
+#         osc: A squ / B tri
+#         wtb: wave filename1
+#         wtb: wave filename2
+#         wtb: wave filename3
+#         wtb: wave filename4
+#
+#
+#    x. wavetable + wave_mix_lfo
+#
+#    4. atk time / rls time
+#
+#  - sw
+#    - toggles currently changeable pot params
+#      - param set 1: freq & resonance
+#      - param set 2: freq type (LP,HP,BP,BN) & osc detune spread
+#      - param set 3: attack & release times
+#      - param set 4: LFO1 rate & depth
+#
+# Arpeggiator?
+#
