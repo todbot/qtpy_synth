@@ -178,7 +178,7 @@ class LFOParams:
 class EnvParams():
     """
     """
-    def __init__(self, attack_time=0.1, decay_time=0.01, release_time=0.2, attack_level=1, sustain_level=1):
+    def __init__(self, attack_time=0.1, decay_time=0.01, release_time=0.2, attack_level=0.8, sustain_level=0.8):
         self.attack_time = attack_time
         self.decay_time = decay_time
         self.release_time = release_time
