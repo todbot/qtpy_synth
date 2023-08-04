@@ -68,15 +68,17 @@ class QTPySynthHardware():
     def read_pots(self):
         """Read the knobs, filter out their noise """
         filt = 0.5
-        avg_cnt = 5
-        knobA_vals = [self.knobA] * avg_cnt
-        knobB_vals = [self.knobB] * avg_cnt
-        for i in range(avg_cnt):
-            knobA_vals[i] = self._knobA.value
-            knobB_vals[i] = self._knobB.value
+        # avg_cnt = 5
+        # knobA_vals = [self.knobA] * avg_cnt
+        # knobB_vals = [self.knobB] * avg_cnt
+        # for i in range(avg_cnt):
+        #     knobA_vals[i] = self._knobA.value
+        #     knobB_vals[i] = self._knobB.value
 
-        self.knobA = filt * self.knobA + (1-filt)*(sum(knobA_vals)/avg_cnt)  # filter noise
-        self.knobB = filt * self.knobB + (1-filt)*(sum(knobB_vals)/avg_cnt)  # filter noise
+        # self.knobA = filt * self.knobA + (1-filt)*(sum(knobA_vals)/avg_cnt)  # filter noise
+        # self.knobB = filt * self.knobB + (1-filt)*(sum(knobB_vals)/avg_cnt)  # filter noise
+        self.knobA = filt * self.knobA + (1-filt)*(self._knobA.value)  # filter noise
+        self.knobB = filt * self.knobB + (1-filt)*(self._knobB.value)  # filter noise
         return (int(self.knobA), int(self.knobB))
 
     def check_touch(self):

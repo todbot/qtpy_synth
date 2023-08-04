@@ -218,7 +218,7 @@ class Patch:
     FIXME: patches should have names too, tod
     """
     def __init__(self, name, wave_type=WaveType.OSC, wave='SAW', detune=1.01,
-                 filt_type=FiltType.LP, filt_f=8000, filt_q=1.2, filt_env_amount=0.5,
+                 filt_type=FiltType.LP, filt_f=8000, filt_q=1.2,
                  filt_env_params=None, amp_env_params=None):
         self.name = name
         self.wave_type = wave_type  # or 'osc' or 'wav' or 'wtb'
@@ -232,7 +232,6 @@ class Patch:
         self.filt_type = filt_type   # allowed values:
         self.filt_f = filt_f
         self.filt_q = filt_q
-        #self.filt_env_amount = filt_env_amount
         self.filt_env_params = filt_env_params or EnvParams()
         self.amp_env_params = amp_env_params or EnvParams()
 
@@ -359,9 +358,7 @@ class WavePolyTwoOsc(Instrument):
 
             # prevent filter instability around note frequency
             # must do this for each voice
-            #if self.patch.filt_f / osc1.frequency < 1.2:
-            #    filt_q = filt_q / 2
-
+            #if self.patch.filt_f / osc1.frequency < 1.2:  filt_q = filt_q / 2
             #filt_f = max(self.patch.filt_f * filt_env.value, osc1.frequency*0.75) # filter unstable <oscfreq?
             #filt_f = max(self.patch.filt_f * filt_env.value, 0) # filter unstable <100?
 

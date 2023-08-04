@@ -25,7 +25,7 @@ patches = (patch1, patch2, patch3, patch4)
 patch1.filt_env_params.attack_time = 0.5
 patch1.amp_env_params.attack_time = 0.01
 
-patch2.filt_type = FiltType.LP
+patch2.filt_type = FiltType.HP
 patch2.wave = 'square'
 patch2.detune=1.01
 patch2.filt_env_params.attack_time = 0.0 # turn off filter  FIXME
@@ -55,7 +55,7 @@ def map_range(s, a1, a2, b1, b2):  return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1
 async def instrument_updater():
     while True:
         inst.update()
-        await asyncio.sleep(0.001)  # as fast as possible
+        await asyncio.sleep(0.01)  # as fast as possible
 
 async def display_updater():
     while True:
@@ -107,7 +107,7 @@ async def input_handler():
         inst.reload_patch()
         param_saves[0] = wavedisp.wave_select_pos(), inst.patch.wave_mix
         param_saves[1] = inst.patch.detune, inst.patch.wave_mix_lfo_amount
-        #param_saves[2] = ...
+        param_saves[2] = inst.patch.filt_type, inst.patch.filt_f
         #param_saves[3] = ...
 
 
@@ -201,20 +201,30 @@ async def input_handler():
 
 
         elif knob_mode == 2: # filter type and filter freq
-            filt_type, filt_freq = param_saves[knob_mode]
+            filt_type, filt_f = param_saves[knob_mode]
 
             if knobA_pickup:
-                filt_type  = map_range(knobA, 300,65300, 0,3)
+                filt_type  = int(map_range(knobA, 0,65535, 0,3))
             if knobB_pickup:
-                filt_freq = map_range(knobB, 0,65535, 100, 8000)
+                filt_f = map_range(knobB, 300,65300, 100, 8000)
 
-            param_saves[knob_mode] = filt_type, filt_freq
+            param_saves[knob_mode] = filt_type, filt_f
 
             inst.patch.filt_type = filt_type
-            inst.patch.filt_freq = filt_freq
+            inst.patch.filt_f = filt_f
 
         elif knob_mode == 3:
-            pass
+            filt_q, filt_env = param_saves[knob_mode]
+
+            if knobA_pickup:
+                filt_q  = map_range(knobA, 0,65535, 0.5,2.5)
+            if knobB_pickup:
+                filt_env = map_range(knobB, 300,65300, 1, 0.01)
+
+            param_saves[knob_mode] = filt_q, filt_env
+
+            inst.patch.filt_q = filt_q
+            inst.patch.filt_env_params.attack_time = filt_env
 
         else:
             pass

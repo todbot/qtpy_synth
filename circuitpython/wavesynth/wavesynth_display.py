@@ -31,14 +31,14 @@ class WavesynthDisplay:
         lwave_sel = label.Label(terminalio.FONT, text=self.patch.wave_select(), x=2, y=6)
         lwave_mix = label.Label(terminalio.FONT, text=str(self.patch.wave_mix), x=80, y=6)
 
-        ldetune  = label.Label(terminalio.FONT, text="detun:%.3f" % self.patch.detune, x=2, y=19)
-        lwave_lfo= label.Label(terminalio.FONT, text="%.2f:wlfo" % self.patch.wave_mix_lfo_amount, x=75, y=19)
+        ldetune  = label.Label(terminalio.FONT, text="-", x=2, y=19)
+        lwave_lfo= label.Label(terminalio.FONT, text="-", x=75, y=19)
 
-        lfilt_type = label.Label(terminalio.FONT, text="filter:"+FiltType.str(self.patch.filt_type), x=2,y=32)
-        lfilt_f  = label.Label(terminalio.FONT, text="%4d" % self.patch.filt_f, x=80,y=32)
+        lfilt_type = label.Label(terminalio.FONT, text="-", x=2,y=32)
+        lfilt_f  = label.Label(terminalio.FONT, text="-", x=75,y=32)
 
-        lfilt_q  = label.Label(terminalio.FONT, text="filtq:%1.1f" % self.patch.filt_q, x=2,y=45)
-        lfilt_env= label.Label(terminalio.FONT, text="0.3:fenv", x=70,y=45)
+        lfilt_q  = label.Label(terminalio.FONT, text="-", x=2,y=45)
+        lfilt_env= label.Label(terminalio.FONT, text="-", x=70,y=45)
 
         self.disp_line1 = displayio.Group()
         for l in (lwave_sel, lwave_mix):
@@ -78,8 +78,8 @@ class WavesynthDisplay:
         self.disp_select()
         self.display_update_line1()
         self.display_update_line2()
-        #self.display_update_line3()
-        #self.display_update_filter()
+        self.display_update_line3()
+        self.display_update_line4()
 
     def disp_select(self):
         for s in self.disp_selects:
@@ -95,7 +95,6 @@ class WavesynthDisplay:
         if self.disp_line1[1].text != wave_mix:
             self.disp_line1[1].text = wave_mix
 
-
     def display_update_line2(self):
         detune = "detun:%1.3f" % self.patch.detune
         wave_lfo = "%1.2f:wlfo" % self.patch.wave_mix_lfo_amount
@@ -105,6 +104,26 @@ class WavesynthDisplay:
         if self.disp_line2[1].text != wave_lfo:
             self.disp_line2[1].text = wave_lfo
 
+    def display_update_line3(self):
+        filt_type = "filter:"+FiltType.str(self.patch.filt_type)
+        filt_f = "freq:%1.1fk" % (self.patch.filt_f / 1000)
+
+        if self.disp_line3[0].text != filt_type:
+            self.disp_line3[0].text = filt_type
+        if self.disp_line3[1].text != filt_f:
+            self.disp_line3[1].text = filt_f
+
+    def display_update_line4(self):
+        filt_q = "filtq:%1.1f" % self.patch.filt_q
+        filt_env = "fenv:%1.2f" % self.patch.filt_env_params.attack_time
+
+        if self.disp_line4[0].text != filt_q:
+            self.disp_line4[0].text = filt_q
+        if self.disp_line4[1].text != filt_env:
+            print("!")
+            self.disp_line4[1].text = filt_env
+
+    # utility methods for dealing with these "wave_selects" I've gotten myself into
 
     def update_wave_selects(self):   # fixme: why isn't this a Patch class method?
         wave_selects = [
