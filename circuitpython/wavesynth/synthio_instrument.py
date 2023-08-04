@@ -192,13 +192,33 @@ class EnvParams():
                                 attack_level = self.attack_level,
                                 sustain_level = self.sustain_level)
 
+class FiltType:
+    """ """
+    LP = const(0)
+    HP = const(1)
+    BP = const(2)
+    def str(t):
+        if t==LP: return 'LP'
+        elif t==HP: return 'HP'
+        elif t==BP: return 'BP'
+        return 'UN'
+
+class WaveType:
+    OSC = const(0)
+    WTB = const(1)
+    def str(t):
+        if t==WTB:  return 'wtb'
+        return 'osc'
+    def from_str(s):
+        if s=='wtb':  return WTB
+        return OSC
 
 class Patch:
     """ Patch is a serializable data structure for the Instrument's settings
     FIXME: patches should have names too, tod
     """
-    def __init__(self, name, wave_type='osc', wave='SAW', detune=1.01,
-                 filt_type='LP', filt_f=8000, filt_q=1.2, filt_env_amount=0.5,
+    def __init__(self, name, wave_type=WaveType.OSC, wave='SAW', detune=1.01,
+                 filt_type=FiltType.LP, filt_f=8000, filt_q=1.2, filt_env_amount=0.5,
                  filt_env_params=None, amp_env_params=None):
         self.name = name
         self.wave_type = wave_type  # or 'osc' or 'wav' or 'wtb'
@@ -209,7 +229,7 @@ class Patch:
         self.wave_mix_lfo_rate = 0.5
         self.wave_dir = '/wav'
         self.detune = detune
-        self.filt_type = filt_type   # allowed values: 'lp', 'bp', or 'hp'
+        self.filt_type = filt_type   # allowed values:
         self.filt_f = filt_f
         self.filt_q = filt_q
         #self.filt_env_amount = filt_env_amount
@@ -220,20 +240,21 @@ class Patch:
         """Construct a 'wave_select' string from patch parts"""
         waveB_str = "/"+self.waveB if self.waveB else ""
         waveA_str = self.wave.replace('.WAV','')  # if it's a wavetable
-        wave_select = self.wave_type + ":" + waveA_str + waveB_str
+        wave_select = WaveType.str(self.wave_type) + ":" + waveA_str + waveB_str
         return wave_select
 
-    # def set_by_wave_select(self, wavsel):
-    #     self.wave_type, oscs = wavsel.split(':')
-    #     self.wave, *waveB = oscs.split('/')  # wave contains wavetable filename if wave_type=='wtb'
-    #     self.waveB = waveB[0] if waveB and len(waveB) else None  # can this be shorter?
-    #     # NOTE: this may need a inst.load_patch(patch)
+    def set_by_wave_select(self, wave_select):
+        """ Parse a 'wave_select' string and set patch from it"""
+        wave_type_str, oscs = wave_select.split(':')
+        self.wave_type = WaveType.from_str(wave_type_str)
+        self.wave, *waveB = oscs.split('/')  # wave contains wavetable filename if wave_type=='wtb'
+        self.waveB = waveB[0] if waveB and len(waveB) else None  # can this be shorter?
 
     def __repr__(self):
         return "Patch('%s','%s')" % (self.name,self.wave_select())
 
 
-# not to be instantiated just an example
+# a very simple instrument
 class Instrument():
 
     def __init__(self, synth, patch=None):
@@ -259,8 +280,15 @@ class Instrument():
             self.synth.release(voice)
             self.voices.pop(midi_note)  # FIXME: need to run filter after release cycle
 
+#
+class MonoOsc(Instrument):
+    def __init__(self, synth, patch):
+        super().__init__(synth)
+        self.load_patch(patch)
 
-class PolyTwoOsc(Instrument):
+
+#
+class WavePolyTwoOsc(Instrument):
     #Voice = namedtuple("Voice", "osc1 osc2 filt_env amp_env")   # idea:
     """
     This is a two-oscillator per voice subtractive synth patch
@@ -276,8 +304,15 @@ class PolyTwoOsc(Instrument):
         self.patch = patch #  self.patch or patch
         print("PolyTwoOsc.load_patch", patch)
 
-        # standard oscillator patch
-        if patch.wave_type == 'osc':
+        self.synth.blocks.clear()   # remove any global LFOs
+
+        raw_lfo1 = synthio.LFO(rate = 0.3)  #, scale=0.5, offset=0.5)  # FIXME: set lfo rate by patch param
+        lfo1 = synthio.Math( synthio.MathOperation.SCALE_OFFSET, raw_lfo1, 0.5, 0.5) # unipolar
+        self.wave_lfo = lfo1
+        self.synth.blocks.append(lfo1)  # global lfo for wave_lfo
+
+        # standard two-osc oscillator patch
+        if patch.wave_type == WaveType.OSC:
             self.waveform = Waves.make_waveform('silence')  # our working buffer, overwritten w/ wavemix
             self.waveformA = Waves.make_waveform( patch.wave )
             self.waveformB = None
@@ -287,13 +322,9 @@ class PolyTwoOsc(Instrument):
                 self.waveform = self.waveformA
 
         # wavetable patch
-        elif patch.wave_type == 'wtb':
+        elif patch.wave_type == WaveType.WTB:
             self.wavetable = Wavetable(patch.wave_dir+"/"+patch.wave+".WAV")
             self.waveform = self.wavetable.waveform
-            raw_lfo1 = synthio.LFO(rate = 0.3)  #, scale=0.5, offset=0.5)
-            lfo1 = synthio.Math( synthio.MathOperation.SCALE_OFFSET, raw_lfo1, 0.5, 0.5) # unipolar
-            self.wave_lfo = lfo1
-            self.synth.blocks.append(lfo1)  # global lfo for wave_lfo
 
         self.filt_env_wave = Waves.lfo_triangle()
 
@@ -306,7 +337,7 @@ class PolyTwoOsc(Instrument):
         for (osc1,osc2,filt_env,amp_env) in self.voices.values():
 
             # let Wavetable do the work  # FIXME: don't need to do this per osc1 yeah?
-            if self.patch.wave_type == 'wtb':
+            if self.patch.wave_type == WaveType.WTB:
                 self.wave_lfo.a.rate = self.patch.wave_mix_lfo_rate  # FIXME: danger
                 wave_pos = self.wave_lfo.value * self.patch.wave_mix_lfo_amount * 10
                 wave_pos += self.patch.wave_mix * self.wavetable.num_waves
@@ -315,9 +346,11 @@ class PolyTwoOsc(Instrument):
             # else simple osc wave mixing
             else:
                 if self.waveformB:
-                    osc1.waveform[:] = lerp(self.waveformA, self.waveformB, self.patch.wave_mix)
+                    #wave_mix = self.patch.wave_mix + self.wave_lfo.a.rate * self.patch.wave_mix_lfo_amount * 2  # FIXME: does not work yet
+                    wave_mix = self.patch.wave_mix
+                    osc1.waveform[:] = lerp(self.waveformA, self.waveformB, wave_mix) #self.patch.wave_mix)
                     if self.patch.detune:
-                        osc2.waveform[:] = lerp(self.waveformA, self.waveformB, self.patch.wave_mix)
+                        osc2.waveform[:] = lerp(self.waveformA, self.waveformB, wave_mix) #self.patch.wave_mix)
 
             filt_q = self.patch.filt_q
             filt_mod = 0
@@ -332,18 +365,18 @@ class PolyTwoOsc(Instrument):
             #filt_f = max(self.patch.filt_f * filt_env.value, osc1.frequency*0.75) # filter unstable <oscfreq?
             #filt_f = max(self.patch.filt_f * filt_env.value, 0) # filter unstable <100?
 
-            if self.patch.filt_type == 'LP':
+            if self.patch.filt_type == FiltType.LP:
                 if self.patch.filt_env_params.attack_time > 0:
                     filt_mod = max(0, 0.5 * 8000 * (filt_env.value/2))  # 8k/2 = max freq, 0.5 = filtermod amt
                     filt_f = self.patch.filt_f + filt_mod
                     filt = self.synth.low_pass_filter( filt_f,filt_q )
 
-            elif self.patch.filt_type == 'HP':
+            elif self.patch.filt_type == FiltType.HP:
                     filt_mod = max(0, 0.5 * 8000 * (filt_env.value/2))  # 8k/2 = max freq, 0.5 = filtermod amt
                     filt_f = self.patch.filt_f + filt_mod
                     filt = self.synth.high_pass_filter( filt_f,filt_q )
 
-            elif self.patch.filt_type == 'BP':
+            elif self.patch.filt_type == FiltType.BP:
                     filt_mod = max(0, 0.5 * 8000 * (filt_env.value/2))  # 8k/2 = max freq, 0.5 = filtermod amt
                     filt_f = self.patch.filt_f + filt_mod
                     filt = self.synth.band_pass_filter( filt_f,filt_q )
@@ -380,7 +413,7 @@ class PolyTwoOsc(Instrument):
             self.synth.release( (osc1,osc2) )
             self.voices.pop(midi_note)  # FIXME: let filter run on release, check amp_env?
             self.synth.blocks.remove(filt_env)  # FIXME: figure out how to release after note is done
-        print("note_off: blocks:", self.synth.blocks)
+        #print("note_off: blocks:", self.synth.blocks)
 
     def note_off_all(self):
         for n in self.voices.keys():
@@ -390,7 +423,3 @@ class PolyTwoOsc(Instrument):
     def redetune(self):
         for (osc1,osc2,filt_env,amp_env) in self.voices.values():
             osc2.frequency = osc1.frequency * self.patch.detune
-
-    # def adjust_filter(filt_f, filt_q):
-    #     self.filt_f = filt_f
-    #     self.filt_q = filt_q

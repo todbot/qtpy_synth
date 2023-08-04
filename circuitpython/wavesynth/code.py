@@ -1,22 +1,20 @@
-#
-#
-#
+# wavesynth_code.py -- wavesynth for qtpy_synth
+# 28 Jul 2023 - @todbot / Tod Kurt
+# part of https://github.com/todbot/qtpy_synth
 
 import asyncio
 import time
-import random
-import synthio
-import ulab.numpy as np
-
 import usb_midi
 import adafruit_midi
 from adafruit_midi.note_on import NoteOn
 from adafruit_midi.note_off import NoteOff
 from adafruit_midi.control_change import ControlChange
 
-from qtpy_synth import QTPySynth
+from qtpy_synth import QTPySynthHardware
+from wavesynth_display import WavesynthDisplay
+from synthio_instrument import WavePolyTwoOsc, Patch, FiltType
 
-from synthio_instrument import PolyTwoOsc, Patch, Instrument
+touch_midi_notes = [40, 48, 52, 55] # can be float
 
 patch1 = Patch('oneuno')
 patch2 = Patch('twotoo')
@@ -27,35 +25,29 @@ patches = (patch1, patch2, patch3, patch4)
 patch1.filt_env_params.attack_time = 0.5
 patch1.amp_env_params.attack_time = 0.01
 
-patch2.filt_type = 'hp'
+patch2.filt_type = FiltType.LP
 patch2.wave = 'square'
 patch2.detune=1.01
 patch2.filt_env_params.attack_time = 0.0 # turn off filter  FIXME
 patch2.amp_env_params.release_time = 1.0
 
 patch3.waveformB = 'square'  # show off wavemixing
-patch3.filt_type = 'bp'
+patch3.filt_type = FiltType.BP
 
 patch4.wave_type = 'wtb'
-#patch4.wave = 'MICROW02'
-#patch4.wave = 'BRAIDS04'
-patch4.wave = 'PLAITS02'
+patch4.wave = 'PLAITS02'  # 'MICROW02' 'BRAIDS04'
 patch4.wave_mix_lfo_amount = 0.23
 #patch4.detune = 0  # disable 2nd oscillator
 patch4.amp_env_params.release_time = 0.5
 
-#print(patch1.amp_env_params)
-#print(patch2.amp_env_params)
 print("--- qtpy_synth wavesynth starting up ---")
 
-qts = QTPySynth( patch4 )
-
-inst = PolyTwoOsc(qts.synth, qts.patch)
+qts = QTPySynthHardware()
+inst = WavePolyTwoOsc(qts.synth, patch4)
+wavedisp = WavesynthDisplay(qts.display, inst.patch)
 
 midi_usb = adafruit_midi.MIDI(midi_in=usb_midi.ports[0], in_channel=0 )
 midi_uart = adafruit_midi.MIDI(midi_in=qts.midi_uart, in_channel=0 )
-
-midi_notes = [40, 48, 52, 55] # can be float
 
 def map_range(s, a1, a2, b1, b2):  return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
 
@@ -67,7 +59,7 @@ async def instrument_updater():
 
 async def display_updater():
     while True:
-        qts.display_update()
+        wavedisp.display_update()
         await asyncio.sleep(0.1)
 
 async def midi_handler():
@@ -111,9 +103,9 @@ async def input_handler():
     def reload_patch(wave_select):
         print("reload patch!", wave_select)
         # the below seems like the wrong way to do this, needlessly complex
-        qts.set_wave_select( wave_select )
+        inst.patch.set_by_wave_select( wave_select )
         inst.reload_patch()
-        param_saves[0] = qts.wave_select_pos(), inst.patch.wave_mix
+        param_saves[0] = wavedisp.wave_select_pos(), inst.patch.wave_mix
         param_saves[1] = inst.patch.detune, inst.patch.wave_mix_lfo_amount
         #param_saves[2] = ...
         #param_saves[3] = ...
@@ -141,13 +133,14 @@ async def input_handler():
                 if touch.pressed:
                     if key_held:  # load a patch
                         print("load patch", touch.key_number)
+                        # disable this for now
                         #inst.load_patch(patches[i])
                         #qts.patch = patches[i]
-                        qts.display_update()
+                        wavedisp.display_update()
                         key_with_touch = True
                     else:  # trigger a note
                         qts.led.fill(0xff00ff)
-                        midi_note = midi_notes[touch.key_number]
+                        midi_note = touch_midi_notes[touch.key_number]
                         inst.note_on(midi_note)
 
                 if touch.released:
@@ -155,7 +148,7 @@ async def input_handler():
                         key_with_touch = False
                     else:
                         qts.led.fill(0)
-                        midi_note = midi_notes[touch.key_number]
+                        midi_note = touch_midi_notes[touch.key_number]
                         inst.note_off(midi_note)
 
         # KEY input
@@ -171,7 +164,7 @@ async def input_handler():
                     knob_mode = (knob_mode + 1) % 4  # FIXME: make a max_knob_mode
                     knobA, knobB = knob_saves[knob_mode] # retrive saved knob positions
                     print("knob mode:",knob_mode, knobA, knobB)
-                    qts.selected_info = knob_mode  # FIXME
+                    wavedisp.selected_info = knob_mode  # FIXME
 
         # Handle parameter changes depending on knob mode
         if knob_mode == 0:  # wave selection & wave_mix
@@ -179,13 +172,13 @@ async def input_handler():
             wave_select_pos, wave_mix = param_saves[knob_mode]
 
             if knobA_pickup:
-                wave_select_pos = map_range( knobA, 0,65535, 0, len(qts.wave_selects)-1)
+                wave_select_pos = map_range( knobA, 0,65535, 0, len(wavedisp.wave_selects)-1)
             if knobB_pickup:
                 wave_mix = map_range( knobB, 0,65535, 0, 1)
 
             param_saves[knob_mode] = wave_select_pos, wave_mix
 
-            wave_select = qts.wave_selects[ int(wave_select_pos) ]
+            wave_select = wavedisp.wave_selects[ int(wave_select_pos) ]
 
             if inst.patch.wave_select() != wave_select:
                 reload_patch(wave_select)
@@ -207,9 +200,18 @@ async def input_handler():
             inst.patch.detune = detune
 
 
-        elif knob_mode == 2:
-            #detune = map_range( knobB, 0,65535, 1, 1.5)
-            pass
+        elif knob_mode == 2: # filter type and filter freq
+            filt_type, filt_freq = param_saves[knob_mode]
+
+            if knobA_pickup:
+                filt_type  = map_range(knobA, 300,65300, 0,3)
+            if knobB_pickup:
+                filt_freq = map_range(knobB, 0,65535, 100, 8000)
+
+            param_saves[knob_mode] = filt_type, filt_freq
+
+            inst.patch.filt_type = filt_type
+            inst.patch.filt_freq = filt_freq
 
         elif knob_mode == 3:
             pass
@@ -217,7 +219,7 @@ async def input_handler():
         else:
             pass
 
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.02)
 
 
 print("--- qtpy_synth wavesynth ready ---")
