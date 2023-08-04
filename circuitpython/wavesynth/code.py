@@ -111,10 +111,12 @@ async def input_handler():
     def reload_patch(wave_select):
         print("reload patch!", wave_select)
         # the below seems like the wrong way to do this, needlessly complex
-        inst.patch.set_wave_select( wave_select )
+        qts.set_wave_select( wave_select )
         inst.reload_patch()
         param_saves[0] = qts.wave_select_pos(), inst.patch.wave_mix
         param_saves[1] = inst.patch.detune, inst.patch.wave_mix_lfo_amount
+        #param_saves[2] = ...
+        #param_saves[3] = ...
 
 
     while True:
@@ -133,7 +135,7 @@ async def input_handler():
             knobB = knobB_new
 
         # TOUCH input
-        if touches := qts.check_touch(): #  touch_on, touch_off ) #, touch_hold )
+        if touches := qts.check_touch():
             for touch in touches:
 
                 if touch.pressed:
@@ -159,10 +161,8 @@ async def input_handler():
         # KEY input
         if key := qts.check_key():
             if key.pressed:
-                print("keypress")
                 key_held = True
             if key.released:
-                print("keyrelease")
                 key_held = False
                 if not key_with_touch:  # key tap == change what knobs do
                     # turn off pickup mode since we change what knobs do

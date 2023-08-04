@@ -216,7 +216,6 @@ class Patch:
         self.filt_env_params = filt_env_params or EnvParams()
         self.amp_env_params = amp_env_params or EnvParams()
 
-    #@property
     def wave_select(self):
         """Construct a 'wave_select' string from patch parts"""
         waveB_str = "/"+self.waveB if self.waveB else ""
@@ -224,12 +223,11 @@ class Patch:
         wave_select = self.wave_type + ":" + waveA_str + waveB_str
         return wave_select
 
-    #@wave_select.setter
-    def set_wave_select(self, wavsel):
-        self.wave_type, oscs = wavsel.split(':')
-        self.wave, *waveB = oscs.split('/')  # wave contains wavetable filename if wave_type=='wtb'
-        self.waveB = waveB[0] if waveB and len(waveB) else None  # can this be shorter?
-        # NOTE: this may need a inst.load_patch(patch)
+    # def set_by_wave_select(self, wavsel):
+    #     self.wave_type, oscs = wavsel.split(':')
+    #     self.wave, *waveB = oscs.split('/')  # wave contains wavetable filename if wave_type=='wtb'
+    #     self.waveB = waveB[0] if waveB and len(waveB) else None  # can this be shorter?
+    #     # NOTE: this may need a inst.load_patch(patch)
 
     def __repr__(self):
         return "Patch('%s','%s')" % (self.name,self.wave_select())
@@ -310,7 +308,7 @@ class PolyTwoOsc(Instrument):
             # let Wavetable do the work  # FIXME: don't need to do this per osc1 yeah?
             if self.patch.wave_type == 'wtb':
                 self.wave_lfo.a.rate = self.patch.wave_mix_lfo_rate  # FIXME: danger
-                wave_pos = self.wave_lfo.value * self.patch.wave_mix_lfo_amount
+                wave_pos = self.wave_lfo.value * self.patch.wave_mix_lfo_amount * 10
                 wave_pos += self.patch.wave_mix * self.wavetable.num_waves
                 self.wavetable.set_wave_pos( wave_pos )
 

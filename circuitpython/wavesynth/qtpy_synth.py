@@ -57,8 +57,8 @@ class QTPySynth():
         display_bus = displayio.I2CDisplay(i2c, device_address=0x3c )
         self.display = adafruit_displayio_ssd1306.SSD1306(display_bus, width=DW, height=DH, rotation=180)
 
-        self.patch = patch
         print("QTPySynth:init: patch=",patch)
+        self.patch = patch
         self.update_wave_selects()
         self.selected_info = 0 # which part of the display is currently selected
 
@@ -218,38 +218,20 @@ class QTPySynth():
 
     def wave_select_pos(self):
         print("wave_select_pos:",self.patch.wave_select())
-        return self.wave_selects.index( self.patch.wave_select() )  # fixme: this seems wrong
+        return self.wave_selects.index( self.patch.wave_select() ) # fixme: this seems wrong
 
+    def wave_select(self):
+        return self.patch.wave_select()
+        #return Patch.wave_selects[ self.make_wave_select_pos ]
 
+    def make_wave_select(self):
+        """Construct a 'wave_select' string from patch parts"""
+        waveB_str = "/"+self.patch.waveB if self.patch.waveB else ""
+        waveA_str = self.patch.wave.replace('.WAV','')  # if it's a wavetable
+        wave_select = self.patch.wave_type + ":" + waveA_str + waveB_str
+        return wave_select
 
-
-    #wavtype = '%3.3s' % self.patch.wave_type
-        #wavA = '%3.3s' % self.patch.wave
-        #wavB = '%3.3s' % self.patch.waveB
-
-        #detune = "%.3f" % (self.patch.detune-1)
-
-        # # only update if needed
-        # if self.disp_wave_info[0].text != wavtype:
-        #     self.disp_wave_info[0].text = wavtype
-        # if self.disp_wave_info[1].text != wavA:
-        #     self.disp_wave_info[1].text = wavA
-        # if self.disp_wave_info[2].text != wavB:
-        #     self.disp_wave_info[2].text = wavB
-
-        #if self.disp_wave_info[4].text != detune:
-        #    self.disp_wave_info[4].text = detune
-
-    # def display_update_filter(self):
-    #     f_str = "%4d" % self.patch.filt_f
-    #     q_str = "%1.1f" % self.patch.filt_q
-
-    #     if self.patch.filt_type != self.disp_filt_info[0].text:
-    #         self.disp_filt_info[0].text = self.patch.filt_type
-
-    #     if f_str != self.disp_filt_info[1].text:
-    #         self.disp_filt_info[1].text = f_str
-
-    #     if q_str != self.disp_filt_info[2].text:
-    #         self.disp_filt_info[2].text = q_str
-    #         #print("edit q", q_str)
+    def set_wave_select(self, wavsel):
+        self.patch.wave_type, oscs = wavsel.split(':')
+        self.patch.wave, *waveB = oscs.split('/')  # wave contains wavetable filename if wave_type=='wtb'
+        self.patch.waveB = waveB[0] if waveB and len(waveB) else None  # can this be shorter?
