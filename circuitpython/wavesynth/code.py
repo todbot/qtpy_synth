@@ -1,6 +1,17 @@
 # wavesynth_code.py -- wavesynth for qtpy_synth
 # 28 Jul 2023 - @todbot / Tod Kurt
 # part of https://github.com/todbot/qtpy_synth
+#
+#  UI:
+#  - Display shows four lines of two parameters each
+#  - The current editable parameter pair is underlined, adjustable by the knobs
+#  - The knobs have "catchup" logic  (
+#       (knob must pass through the displayed value before value can be changed)
+#
+#  - Key tap (press & release) == change what editable line (what knobs are editing)
+#  - Key hold + touch press = load patch 1,2,3,4  (turned off currently)
+#  - Touch press/release == play note / release note
+#
 
 import asyncio
 import time
@@ -84,11 +95,6 @@ async def midi_handler():
 
         await asyncio.sleep(0.001)
 
-#  UI:
-#  - key tap (press & release) == change what knobs are editing
-#  - key hold + touch press = load patch 1,2,3,4
-#  - touch press/release == play note / release note
-#
 async def input_handler():
 
     # fixme: put these in qtpy_synth.py? no I think they are part of this "app"
@@ -108,8 +114,7 @@ async def input_handler():
         param_saves[0] = wavedisp.wave_select_pos(), inst.patch.wave_mix
         param_saves[1] = inst.patch.detune, inst.patch.wave_mix_lfo_amount
         param_saves[2] = inst.patch.filt_type, inst.patch.filt_f
-        #param_saves[3] = ...
-
+        param_saves[3] = inst.patch.filt_q, inst.patch.filt_env_params.attack_time
 
     while True:
         # KNOB input
