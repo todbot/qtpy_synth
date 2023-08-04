@@ -1,3 +1,6 @@
+# qtpy_synth.py -- hardware defines and setup for qtpy_synth board
+# 10 Jul 2023 - @todbot / Tod Kurt
+# part of https://github.com/todbot/qtpy_synth
 
 import board, busio
 import analogio, keypad

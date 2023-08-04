@@ -27,20 +27,20 @@ f_orig = 0
 touch_midi_notes = [40, 48, 52, 60] # can be float
 touch_notes = [None] * 4
 
-wave_saw = np.linspace(30000,-30000, num=512, dtype=np.int16)  # default squ is too clippy
-amp_env = synthio.Envelope(sustain_level=0.8, release_time=0.4, attack_time=0.001)
+# set up some default synth parameters
+wave_saw = np.linspace(30000,-30000, num=256, dtype=np.int16)  # default squ is too clippy, should be 3dB down or so
+amp_env = synthio.Envelope(sustain_level=0.8, release_time=0.6, attack_time=0.001)
 qts.synth.envelope = amp_env
 
-# set up display with our 3 bits of info
+# set up display with our 3 chunks of info
 disp_group = displayio.Group()
 qts.display.root_group = disp_group
 
-label_pos = ( (5,5), (30,5), (60,5) )  # filter_type, filter_f, filter_q
+labels_pos = ( (5,5), (50,5), (80,5) )  #  filter_f, filter_type, filter_q
 disp_info = displayio.Group()
-for (x,y) in label_pos:
+for (x,y) in labels_pos:
     disp_info.append( label.Label(terminalio.FONT, text="-", x=x, y=y) )
 disp_group.append(disp_info)
-
 
 
 def map_range(s, a1, a2, b1, b2):  return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
@@ -49,17 +49,17 @@ def display_update():
     f_str = "%4d" % cfg.filter_f
     q_str = "%1.1f" % cfg.filter_q
 
-    if cfg.filter_type != disp_info[0].text:
-        disp_info[0].text = cfg.filter_type
-
-    if f_str != disp_info[1].text:
+    if f_str != disp_info[0].text:
         disp_info[1].text = f_str
+
+    if cfg.filter_type != disp_info[1].text:
+        disp_info[0].text = cfg.filter_type
 
     if q_str != disp_info[2].text:
         disp_info[2].text = q_str
         print("edit q", q_str)
 
-def touch_on(i):
+def touch_on(i):  # callback
     global f_orig
     print("touch press",i)
     f = synthio.midi_to_hz(touch_midi_notes[i])
@@ -69,7 +69,7 @@ def touch_on(i):
     qts.led.fill(0xff00ff)
     f_orig = cfg.filter_f
 
-def touch_off(i):
+def touch_off(i):  # callback
     global f_orig
     #print("touch release", i)
     if touch_notes[i]:
@@ -78,7 +78,7 @@ def touch_off(i):
     cfg.filter_f = f_orig
     f_orig=0
 
-def touch_hold(i,v):
+def touch_hold(i,v):  # callback
     vn = min(max(0, v),2000)
     cfg.filter_f  = min(f_orig * (1 + vn/1000), 8000)
     print("hold %d %d %d" % (i,vn, cfg.filter_f))
@@ -96,10 +96,6 @@ def make_filter():
         print("unknown filter type", cfg.filter_type)
     return filter
 
-def update_filter_cfg(filter_type, filter_f, filter_q):
-    cfg.filter_type = filter_type
-    cfg.filter_f = filter_f
-    cfg.filter_q = filter_q
 
 # --------------------------------------------------------
 
@@ -115,7 +111,7 @@ async def display_updater():
 async def input_handler():
     while True:
         key = qts.check_key()
-        qts.check_touch( touch_on, touch_off, touch_hold )
+        qts.check_touch( touch_on, touch_off, touch_hold )  # don't really like these callbacks
 
         (knobA, knobB) = qts.read_pots()
         if key == "pressed":
@@ -128,7 +124,8 @@ async def input_handler():
 
         await asyncio.sleep(0.01)
 
-async def filter_tweaker():
+async def synth_updater():
+    # for any notes playing, adjust its filter in realtime
     while True:
         for n in touch_notes:
             if n:
@@ -140,7 +137,7 @@ print("qtpy_synth hwtest4 ready")
 async def main():
     task1 = asyncio.create_task(display_updater())
     task2 = asyncio.create_task(input_handler())
-    task3 = asyncio.create_task(filter_tweaker())
+    task3 = asyncio.create_task(synth_updater())
     await asyncio.gather(task1,task2,task3)
 
 asyncio.run(main())
