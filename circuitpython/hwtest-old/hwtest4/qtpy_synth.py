@@ -6,13 +6,8 @@ from adafruit_debouncer import Debouncer # circup install adafruit_debouncer
 import neopixel  # circup install neopixel
 import audiopwmio, audiomixer
 import synthio
-import ulab.numpy as np
-import displayio, terminalio, vectorio
+import displayio
 import adafruit_displayio_ssd1306  # circup install adafruit_displayio_ssd1306
-from adafruit_display_text import bitmap_label as label
-#import adafruit_midi
-#from adafruit_midi.note_on import NoteOn
-#from adafruit_midi.note_off import NoteOff
 
 SAMPLE_RATE = 28_000
 MIXER_BUFFER_SIZE = 4096
@@ -20,12 +15,6 @@ DW,DH = 128, 64  # display width/height
 
 # note: we're hanging on to some of the interstitial objects like 'i2c' & 'display_bus'
 # even though we shouldn't, because I think the gc will collect it unless we hold on to it
-
-class QTPySynthConfig():
-    def __init__(self):
-        self.filter_f = 2000
-        self.filter_q = 1.2
-        self.filter_type = 'lpf'
 
 
 class QTPySynth():
@@ -42,6 +31,7 @@ class QTPySynth():
         self.touches = []   # for debouncer
         for pin in (board.A3, board.A2, board.MISO, board.SCK):
            touchin = touchio.TouchIn(pin)
+           touchin.threshold = int(touchin.threshold * 1.05) # noise protection
            self.touchins.append(touchin)
            self.touches.append( Debouncer(touchin) )
 
@@ -61,14 +51,13 @@ class QTPySynth():
         self.mixer.voice[0].level = 0.5 # turn down the volume a bit since this can get loud
         self.mixer.voice[0].play(self.synth)
 
-        self.cfg = QTPySynthConfig()
-
     def check_key(self):
         if key := self.keys.events.get():
             if key.pressed:
-                self.led.fill(0xffffff)
+                return "pressed"
             if key.released:
-                self.led.fill(0)
+                return "released"
+        return None
 
     def read_pots(self):
         filt = 0.5
@@ -94,47 +83,3 @@ class QTPySynth():
             elif touch.value:  # pressed & held
                 v = self.touchins[i].raw_value - self.touchins[i].threshold
                 hold_func(i, v)
-
-    def make_filter(self, cfg=None):
-        if not cfg: cfg = self.cfg
-        if cfg.filter_type == 'lpf':
-            filter = self.synth.low_pass_filter(cfg.filter_f, cfg.filter_q)
-        else:
-            print("unknown filter type", self.filter_type)
-        return filter
-
-    def update_filter(self, filter_type, filter_f, filter_q):
-        self.cfg.filter_type = filter_type
-        self.cfg.filter_f = filter_f
-        self.cfg.filter_q = filter_q
-
-
-    def display_setup(self):
-        disp_group = displayio.Group()
-        self.display.root_group = disp_group
-
-        lfilt_type = label.Label(terminalio.FONT, text=self.cfg.filter_type, x=5,y=5)
-        lfreq_val  = label.Label(terminalio.FONT, text=str(self.cfg.filter_f), x=30,y=5)
-        lfreq_q  = label.Label(terminalio.FONT, text=str(self.cfg.filter_q), x=60,y=5)
-
-        self.disp_filter_info = displayio.Group()
-        for l in (lfilt_type, lfreq_val, lfreq_q):
-            self.disp_filter_info.append(l)
-        disp_group.append(self.disp_filter_info)
-
-    def display_update(self):
-        self.display_update_filter()
-
-    def display_update_filter(self):
-        f_str = "%4d" % self.cfg.filter_f
-        q_str = "%1.1f" % self.cfg.filter_q
-
-        if self.cfg.filter_type != self.disp_filter_info[0].text:
-            self.disp_filter_info[0].text = self.cfg.filter_type
-
-        if f_str != self.disp_filter_info[1].text:
-            self.disp_filter_info[1].text = f_str
-
-        if q_str != self.disp_filter_info[2].text:
-            self.disp_filter_info[2].text = q_str
-            print("edit q", q_str)
