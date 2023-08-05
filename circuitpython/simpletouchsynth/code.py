@@ -80,16 +80,12 @@ def note_on( notenum, vel=64):
     notes_playing[notenum] = note
     qts.synth.press( note )
     qts.led.fill(0xff00ff)
-    #f_orig = cfg.filter_f
 
 def note_off( notenum, vel=0):
-    #global f_orig
     print("note_off", notenum, vel)
     if note := notes_playing[notenum]:
         qts.synth.release( note )
     qts.led.fill(0)
-    #cfg.filter_f = f_orig
-    #f_orig = 0
 
 def touch_on(i):  # callback
     note_on( touch_midi_notes[i] )
@@ -121,7 +117,7 @@ def make_filter():
 
 async def display_updater():
     while True:
-        print("knobs:", int(qts.knobA//255), int(qts.knobB//255)
+        print("knobs:", int(qts.knobA//255), int(qts.knobB//255),
             #qts.touchins[0].raw_value, qts.touchins[1].raw_value,
             #qts.touchins[3].raw_value, qts.touchins[2].raw_value
         )
@@ -138,7 +134,6 @@ async def input_handler():
             ftpos = (filter_types.index(cfg.filter_type)+1) % len(filter_types)
             cfg.filter_type = filter_types[ ftpos ]
 
-        #if f_orig==0:  # HACK
         cfg.filter_f = map_range( knobA, 0,65535, 30, 8000)
         cfg.filter_q = map_range( knobB, 0,65535, 0.1, 3.0)
 
@@ -171,51 +166,3 @@ async def main():
     await asyncio.gather(task1,task2,task3,task4)
 
 asyncio.run(main())
-
-
-
-# # this display stuff will all go in a class soon
-# import vectorio, displayio
-# note_group = displayio.Group()
-# wave_group = displayio.Group()
-# nx,ny,nw,nh = 10,30,3,5
-# wx,wy,ww,wh = 10,60,3,5
-# dw,dh = qts.display.width, qts.display.height
-
-# def make_display():
-#     step_pal = displayio.Palette(2)
-#     step_pal[0] = 0xffffff  # the only color we got
-#     #step_pal[1] = 0x808080
-#     reticules = displayio.Group()
-#     reticules.append( vectorio.Rectangle(pixel_shader=step_pal, width=dw, height=1, x=0, y=dh//2) )
-#     qts.disp_group.append(reticules)
-
-#     for i in range(8):
-#         note_group.append(vectorio.Rectangle(pixel_shader=step_pal, width=nw, height=nh, x=nx+i*10, y=ny))
-#         wave_group.append(vectorio.Rectangle(pixel_shader=step_pal, width=ww, height=wh, x=wx+i*10, y=wy))
-#     qts.disp_group.append(note_group)
-#     qts.disp_group.append(wave_group)
-
-# def update_display(steps):
-#     for i in range(8):
-#         note_group[i].y = ny - random.randint(30,60) // 4 #steps[i].notenum // 5
-#         wave_group[i].y = wy - random.randint(0,8) * 4 #steps[i].waveid * 4
-#         #if i==0: print( note_group[i].height )
-
-# make_display()
-# update_display(None)
-
-
-# note = synthio.Note(frequency=0)
-# while True:
-#     #check_touch()
-#     if key := keys.events.get():
-#         if key.released:
-#             synth.release( note )
-#         if key.pressed:
-#             #print("knobs", knobA.value, knobB.value)
-#             note = synthio.Note(frequency=synthio.midi_to_hz(random.randint(32,48)), waveform=wave_saw)
-#             synth.press(note)
-#             print("key:", key, i2c.frequency)
-
-#     #text1.text = time.monotonic()
