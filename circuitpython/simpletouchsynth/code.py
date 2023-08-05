@@ -49,12 +49,12 @@ qts.synth.envelope = amp_env
 disp_group = displayio.Group()
 qts.display.root_group = disp_group
 
-labels_pos = ( (5,5), (50,5), (100,5) )  #  filter_f, filter_type, filter_q
+labels_pos = ( (5,5), (50,5), (100,5), (15,50) )  #  filter_f, filter_type, filter_q,  hellotext
 disp_info = displayio.Group()
 for (x,y) in labels_pos:
     disp_info.append( label.Label(terminalio.FONT, text="-", x=x, y=y) )
 disp_group.append(disp_info)
-
+disp_info[3].text = "simpletouchsynth"
 
 def map_range(s, a1, a2, b1, b2):  return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
 
