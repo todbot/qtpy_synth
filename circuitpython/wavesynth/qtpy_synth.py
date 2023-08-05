@@ -8,7 +8,6 @@
 # UI fixme:
 # knob "pickup" vs knob "catchup"  (maybe done in app instead)
 
-from collections import namedtuple
 import board, busio
 import analogio, keypad
 import touchio
@@ -25,8 +24,6 @@ DW,DH = 128, 64  # display width/height
 
 # note: we're hanging on to some of the interstitial objects like 'i2c' & 'display_bus'
 # even though we shouldn't, because I think the gc will collect it unless we hold on to it
-
-TouchEvent = namedtuple("TouchEvent", "key_number pressed released")
 
 class QTPySynthHardware():
     def __init__(self):
@@ -68,6 +65,7 @@ class QTPySynthHardware():
     def read_pots(self):
         """Read the knobs, filter out their noise """
         filt = 0.5
+
         # avg_cnt = 5
         # knobA_vals = [self.knobA] * avg_cnt
         # knobB_vals = [self.knobB] * avg_cnt
@@ -77,6 +75,7 @@ class QTPySynthHardware():
 
         # self.knobA = filt * self.knobA + (1-filt)*(sum(knobA_vals)/avg_cnt)  # filter noise
         # self.knobB = filt * self.knobB + (1-filt)*(sum(knobB_vals)/avg_cnt)  # filter noise
+
         self.knobA = filt * self.knobA + (1-filt)*(self._knobA.value)  # filter noise
         self.knobB = filt * self.knobB + (1-filt)*(self._knobB.value)  # filter noise
         return (int(self.knobA), int(self.knobB))
@@ -88,22 +87,13 @@ class QTPySynthHardware():
             touch = self.touches[i]
             touch.update()
             if touch.rose:
-                events.append(TouchEvent(i,True, False))
+                events.append(keypad.Event(i,True))
             elif touch.fell:
-                events.append(TouchEvent(i,False,True))
+                events.append(keypad.Event(i,False))
         return events
 
-    def check_touch_old(self, press_func, release_func=None, hold_func=None):
-        """Check the four touch inputs, calling the press/release/hold callbacks as appropriate """
+    def check_touch_hold(self, hold_func):
         for i in 0,1,2,3:
-            touch = self.touches[i]
-            touch.update()
-            if touch.rose:
-                press_func(i)
-            elif touch.fell:
-                if release_func:
-                    release_func(i)
-            elif touch.value:  # pressed & held
+            if self.touches[i].value:  # pressed
                 v = self.touchins[i].raw_value - self.touchins[i].threshold
-                if hold_func:
-                    hold_func(i, v)
+                hold_func(i, v)

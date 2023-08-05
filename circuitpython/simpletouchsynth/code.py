@@ -21,7 +21,7 @@ from adafruit_midi.note_on import NoteOn
 from adafruit_midi.note_off import NoteOff
 from adafruit_midi.control_change import ControlChange
 
-from qtpy_synth import QTPySynth
+from qtpy_synth import QTPySynthHardware
 
 class SynthConfig():
     def __init__(self):
@@ -30,7 +30,7 @@ class SynthConfig():
         self.filter_q = 1.2
         self.filter_mod = 0
 
-qts = QTPySynth()
+qts = QTPySynthHardware()
 cfg = SynthConfig()
 
 touch_midi_notes = [40, 48, 52, 60] # can be float
@@ -87,12 +87,7 @@ def note_off( notenum, vel=0):
         qts.synth.release( note )
     qts.led.fill(0)
 
-def touch_on(i):  # callback
-    note_on( touch_midi_notes[i] )
-
-def touch_off(i):  # callback
-    note_off( touch_midi_notes[i] )
-
+# how to do this
 def touch_hold(i,v):  # callback
     vn = min(max(0, v), 2000)  # ensure touch info stays positive
     cfg.filter_mod  =  (vn/2000) * 3000   # range 0-3000
@@ -126,13 +121,19 @@ async def display_updater():
 
 async def input_handler():
     while True:
-        key = qts.check_key()
-        qts.check_touch( touch_on, touch_off, touch_hold )  # don't really like these callbacks
         (knobA, knobB) = qts.read_pots()
 
-        if key == "pressed":
-            ftpos = (filter_types.index(cfg.filter_type)+1) % len(filter_types)
-            cfg.filter_type = filter_types[ ftpos ]
+        if key := qts.check_key():
+            if key.pressed:
+                ftpos = (filter_types.index(cfg.filter_type)+1) % len(filter_types)
+                cfg.filter_type = filter_types[ ftpos ]
+
+        if touches := qts.check_touch():
+            for touch in touches:
+                if touch.pressed: note_on( touch_midi_notes[touch.key_number] )
+                if touch.released: note_off( touch_midi_notes[touch.key_number] )
+
+        qts.check_touch_hold(touch_hold)
 
         cfg.filter_f = map_range( knobA, 0,65535, 30, 8000)
         cfg.filter_q = map_range( knobB, 0,65535, 0.1, 3.0)
