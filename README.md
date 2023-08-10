@@ -3,7 +3,7 @@
 A simple [QTPy RP2040](https://learn.adafruit.com/adafruit-qt-py-2040/overview)-based
 synth to experiment with [`synthio`](https://github.com/todbot/circuitpython-synthio-tricks).
 
-<img src="./docs/qtpy_synth_proto2a.jpg">
+<img src="./docs/qtpy_synth_proto2a.jpg" width=500>
 
 Features:
  - Mono audio output circuit, converting PWM to audio, as per [RP2040 design guidelines](https://datasheets.raspberrypi.com/rp2040/hardware-design-with-rp2040.pdf#page=24)
