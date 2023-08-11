@@ -7,12 +7,15 @@ synth to experiment with [`synthio`](https://github.com/todbot/circuitpython-syn
 
 Features:
  - Mono audio output circuit, converting PWM to audio, as per [RP2040 design guidelines](https://datasheets.raspberrypi.com/rp2040/hardware-design-with-rp2040.pdf#page=24)
- - Optoisolated MIDI Input via TRS-A 3.5mm jack
+ - Optoisolated MIDI Input via [MIDI TRS-A 3.5mm jack](https://www.perfectcircuit.com/make-noise-0-coast-midi-cable.html)
  - Two pots for controlling parameters
  - One switch for controlling parameters
  - Four capsense touch buttons for synth triggering
+ - USB MIDI in/out of course too
 
 Some programs written specifically for this board:
+
+- [hwtest](https://github.com/todbot/qtpy_synth/tree/main/circuitpython/hwtest) - test out the hardware with a simple synth
 
 - [simpletouchsynth](https://github.com/todbot/qtpy_synth/tree/main/circuitpython/simpletouchsynth) - play with filters using touch sensors
 
