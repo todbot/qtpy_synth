@@ -49,6 +49,19 @@ The parts you need to add are:
     You may need to trim down your headers to be the right size.
 
 
+### Pins used
+
+The board uses all of the QTPy RP2040 pins:
+
+* `board.A0` - left knob
+* `board.A1` - right knob
+* `board.TX` - middle button
+* `board.RX` - TRS UART MIDI in
+* `board.MOSI` - PWM Audio Out
+* `board.SCL` & `board.SDA` - I2C bus for OLED display
+* `board.A3`, `board.A2`, `board.MISO`, `board.SCK`,  -- touch pads 1,2,3,4
+
+For more details see [`hwtest/code.py`](https://github.com/todbot/qtpy_synth/tree/main/circuitpython/hwtest/code.py).
 
 ### Schematic
 
