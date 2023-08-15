@@ -1,10 +1,21 @@
-# qtpy_synth_test2.py -- test hardware of qtpy_synth board
+# qtpy_synth_hwtest_code.py -- test hardware of qtpy_synth board
 # 27 Jun 2023 - @todbot / Tod Kurt
 #
-# libaries needed:
+# Functionality:
+# - touch pads 1,2,3,4 trigger synth notes (defined in 'midi_notes')
+# - middle button triggers random synth notes
+# - left knob controls filter cutoff
+# - right knob controls filter resonance
+# - sending TRS UART MIDI will print out those bytes to the REPL
+#
+# Libaries needed:
 # - asyncio
-# - adafruit_display_ssdd1306
 # - adafruit_debouncer
+# - adafruit_displayio_ssd1306
+# - adafruit_display_text
+# Install them all with:
+#   circup install asyncio adafruit_debouncer adafruit_displayio_ssd1306 adafruit_display_text
+#
 #
 import asyncio
 import time, random
@@ -18,12 +29,18 @@ from adafruit_display_text import bitmap_label as label
 import touchio
 from adafruit_debouncer import Debouncer
 
+midi_notes = (33, 45, 52, 57)
+filter_freq = 4000
+filter_resonance = 1.2
+
 displayio.release_displays()
 
+# set up our knobs and button
 knobA = analogio.AnalogIn(board.A0)
 knobB = analogio.AnalogIn(board.A1)
 keys = keypad.Keys( pins=(board.TX,),  value_when_pressed=False )
 
+# set up touch pins using a debouncer
 touch_pins = (board.A3, board.A2, board.MISO, board.SCK)
 touchins = []
 touchs = []
@@ -39,6 +56,7 @@ dw,dh = 128, 64
 display_bus = displayio.I2CDisplay(i2c, device_address=0x3c )
 display = adafruit_displayio_ssd1306.SSD1306(display_bus, width=dw, height=dh, rotation=180)
 
+# set up the synth->audio system
 audio = audiopwmio.PWMAudioOut(board.MOSI)
 mixer = audiomixer.Mixer(voice_count=1, sample_rate=28000, channel_count=1,
                          bits_per_sample=16, samples_signed=True,
@@ -48,10 +66,12 @@ audio.play(mixer)
 mixer.voice[0].level = 0.75 # turn down the volume a bit since this can get loud
 mixer.voice[0].play(synth)
 
+# set up the synth
 wave_saw = np.linspace(30000,-30000, num=256, dtype=np.int16)  # default squ is too clippy
 amp_env = synthio.Envelope(sustain_level=0.8, release_time=0.4, attack_time=0.001)
 synth.envelope = amp_env
 
+# set up info to be displayed
 maingroup = displayio.Group()
 display.show(maingroup)
 text1 = label.Label(terminalio.FONT, text="helloworld...", x=0, y=10)
@@ -60,10 +80,8 @@ text3 = label.Label(terminalio.FONT, text="hwtest. press!", x=0, y=50)
 for t in (text1, text2, text3):
     maingroup.append(t)
 
-midi_notes = (33, 45, 52, 57)
 touch_notes = [None] * 4
-filter_freq = 4000
-filter_resonance = 1.2
+sw_pressed = False
 
 def check_touch():
     for i in range(len(touchs)):
@@ -79,9 +97,6 @@ def check_touch():
         if touch.fell:
             print("touch release", i)
             synth.release( touch_notes[i] )
-
-#note = synthio.Note(frequency=0)
-sw_pressed = False
 
 async def debug_printer():
     while True:
