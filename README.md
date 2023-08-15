@@ -31,6 +31,7 @@ Some programs written specifically for this board:
 ### Building it
 
 The [Tindie version is a partially-assembled PCB](https://www.tindie.com/products/todbot/qtpy_synth/).
+
 The completely assembled SMD sections of the board are:
 
 * audio output circuit
@@ -40,12 +41,15 @@ The parts you need to add are:
 
 * [QTPy RP2040](https://www.adafruit.com/product/4900)
 * 0.91" [I2C OLED display](https://amzn.to/3KDmy73) (w/ pins in Gnd/Vcc/SCL/SDA order)
-* Two 10k potentiometers, 9mm  ([example pots](https://amzn.to/3DYYJm5)) and knobs
+* Two 10k potentiometers, 9mm  ([example pots](https://amzn.to/3DYYJm5)) and [knobs](https://amzn.to/3QAkSyR)
 * One tact switch, 6mm ([example switch](https://amzn.to/47nJaSN))
 * Headers and sockets to mount QTPy & display, to taste
+  * [This male & female header kit looks pretty good](https://amzn.to/3qqbtiO),
+    as I prefer to put female headers on the PCB and male headers on the QTPy and OLED display.
+    You may need to trim down your headers to be the right size.
 
 
 
-### Schematic:
+### Schematic
 
 [<img src="./schematics/qtpy_synth_proto2b_sch.png" width=500>](./schematics/qtpy_synth_proto2b_sch.pdf)
