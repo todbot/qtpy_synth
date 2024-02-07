@@ -6,7 +6,7 @@ import os
 import displayio, terminalio, vectorio
 from adafruit_display_text import bitmap_label as label
 
-from synthio_instrument import FiltType
+from qtpy_synth.synthio_instrument import FiltType
 
 # class WavesynthDisplay(displayio.Group):
 #     def __init__(self, display):
