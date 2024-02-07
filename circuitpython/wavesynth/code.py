@@ -16,14 +16,12 @@
 import asyncio
 import time
 import usb_midi
-import adafruit_midi
-from adafruit_midi.note_on import NoteOn
-from adafruit_midi.note_off import NoteOff
-from adafruit_midi.control_change import ControlChange
 
-from qtpy_synth import QTPySynthHardware
+from qtpy_synth.hardware import Hardware
+from qtpy_synth.synthio_instrument import WavePolyTwoOsc, Patch, FiltType
+import qtpy_synth.winterbloom_smolmidi as smolmidi
+
 from wavesynth_display import WavesynthDisplay
-from synthio_instrument import WavePolyTwoOsc, Patch, FiltType
 
 touch_midi_notes = [40, 48, 52, 55] # can be float
 
@@ -53,12 +51,13 @@ patch4.amp_env_params.release_time = 0.5
 
 print("--- qtpy_synth wavesynth starting up ---")
 
-qts = QTPySynthHardware()
+qts = Hardware()
 inst = WavePolyTwoOsc(qts.synth, patch4)
 wavedisp = WavesynthDisplay(qts.display, inst.patch)
 
-midi_usb = adafruit_midi.MIDI(midi_in=usb_midi.ports[0], in_channel=0 )
-midi_uart = adafruit_midi.MIDI(midi_in=qts.midi_uart, in_channel=0 )
+# let's get the midi going
+midi_usb_in = smolmidi.MidiIn(usb_midi.ports[0])
+midi_uart_in = smolmidi.MidiIn(qts.midi_uart)
 
 def map_range(s, a1, a2, b1, b2):  return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
 
@@ -73,27 +72,29 @@ async def display_updater():
         wavedisp.display_update()
         await asyncio.sleep(0.1)
 
+
 async def midi_handler():
     while True:
-        # MIDI input
-        while msg := midi_usb.receive() or midi_uart.receive():
-            if isinstance(msg, NoteOn) and msg.velocity != 0:
+        while msg := midi_usb_in.receive() or midi_uart_in.receive():
+            if msg.type == smolmidi.NOTE_ON:
                 inst.note_on(msg.note)
                 qts.led.fill(0xff00ff)
-            elif isinstance(msg,NoteOff) or isinstance(msg,NoteOn) and msg.velocity==0:
+            elif msg.type == smolmidi.NOTE_OFF:
                 inst.note_off(msg.note)
                 qts.led.fill(0x000000)
-            elif isinstance(msg,ControlChange):
-                print("CC:",msg.control, msg.value)
-                if msg.control == 71:  # "sound controller 1"
-                    inst.patch.wave_mix = msg.value/127
-                elif msg.control == 1: # mod wheel
-                    inst.patch.wave_mix_lfo_amount = msg.value/127 * 50
+            elif msg.type == smolmidi.CC:
+                ccnum = msg.data[0]
+                ccval = msg.data[1]
+                if ccnum == 71:  # "sound controller 1"
+                    inst.patch.wave_mix = ccval/127
+                elif ccnum == 1: # mod wheel
+                    inst.patch.wave_mix_lfo_amount = ccval/127 * 50
                     #inst.patch.wave_mix_lfo_rate = msg.value/127 * 5
-                elif msg.control == 74: # filter cutoff
-                    inst.patch.filt_f = msg.value/127 * 8000
+                elif ccnum == 74: # filter cutoff
+                    inst.patch.filt_f = ccval/127 * 8000
 
         await asyncio.sleep(0.001)
+
 
 async def input_handler():
 

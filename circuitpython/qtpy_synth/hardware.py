@@ -1,4 +1,4 @@
-# qtpy_synth.py -- hardware defines and setup for qtpy_synth board
+# qtpy_synth.hardware.py -- hardware defines and setup for qtpy_synth board
 # 22 Jul 2023 - @todbot / Tod Kurt
 # part of https://github.com/todbot/qtpy_synth
 #
@@ -25,7 +25,7 @@ DW,DH = 128, 64  # display width/height
 # note: we're hanging on to some of the interstitial objects like 'i2c' & 'display_bus'
 # even though we shouldn't, because I think the gc will collect it unless we hold on to it
 
-class QTPySynthHardware():
+class Hardware():
     def __init__(self):
 
         self.led = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.1)

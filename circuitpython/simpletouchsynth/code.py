@@ -3,7 +3,8 @@
 # part of https://github.com/todbot/qtpy_synth
 #
 # Needed libraries to install:
-#  circup install asyncio neopixel adafruit_debouncer adafruit_displayio_ssd1306 adafruit_display_text adafruit_midi
+#  circup install asyncio neopixel adafruit_debouncer adafruit_displayio_ssd1306 adafruit_display_text
+# Also install "qtpy_synth" directory in CIRCUITPY
 #
 
 import asyncio
@@ -11,17 +12,13 @@ import time
 import random
 import synthio
 import ulab.numpy as np
+import usb_midi
 
 import displayio, terminalio, vectorio
 from adafruit_display_text import bitmap_label as label
 
-import usb_midi
-import adafruit_midi
-from adafruit_midi.note_on import NoteOn
-from adafruit_midi.note_off import NoteOff
-from adafruit_midi.control_change import ControlChange
-
-from qtpy_synth import QTPySynthHardware
+from qtpy_synth.hardware import Hardware
+import qtpy_synth.winterbloom_smolmidi as smolmidi
 
 class SynthConfig():
     def __init__(self):
@@ -30,18 +27,20 @@ class SynthConfig():
         self.filter_q = 1.2
         self.filter_mod = 0
 
-qts = QTPySynthHardware()
+qts = Hardware()
 cfg = SynthConfig()
 
 touch_midi_notes = [40, 48, 52, 60] # can be float
 notes_playing = {}  # dict of notes currently playing
 
 # let's get the midi going
-midi_usb = adafruit_midi.MIDI(midi_in=usb_midi.ports[0], in_channel=0 )
-midi_uart = adafruit_midi.MIDI(midi_in=qts.midi_uart, in_channel=0 )
+midi_usb_in = smolmidi.MidiIn(usb_midi.ports[0])
+midi_uart_in = smolmidi.MidiIn(qts.midi_uart)
 
 # set up some default synth parameters
-wave_saw = np.linspace(30000,-30000, num=512, dtype=np.int16)  # default squ is too clippy, should be 3dB down or so
+wave_saw = np.linspace(30000,-30000, num=512, dtype=np.int16)
+# default squ is too clippy, should be 3dB down or so
+
 amp_env = synthio.Envelope(sustain_level=0.8, release_time=0.6, attack_time=0.001)
 qts.synth.envelope = amp_env
 
@@ -150,11 +149,11 @@ async def synth_updater():
 
 async def midi_handler():
     while True:
-        while msg := midi_usb.receive() or midi_uart.receive():
-            if isinstance(msg, NoteOn) and msg.velocity != 0:
-                note_on(msg.note, msg.velocity)
-            elif isinstance(msg,NoteOff) or isinstance(msg,NoteOn) and msg.velocity==0:
-                note_off(msg.note, msg.velocity)
+        while msg := midi_usb_in.receive() or midi_uart_in.receive():
+            if msg.type == smolmidi.NOTE_ON:
+                note_on( msg.data[0], msg.data[1] )
+            elif msg.type == smolmidi.NOTE_OFF:
+                note_off( msg.data[0], msg.data[1] )
         await asyncio.sleep(0.001)
 
 print("-- qtpy_synth simpletouchsynth ready --")

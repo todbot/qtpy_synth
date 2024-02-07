@@ -30,7 +30,7 @@ from adafruit_display_text import bitmap_label as label
 import touchio
 from adafruit_debouncer import Debouncer
 import usb_midi
-import winterbloom_smolmidi as smolmidi
+import qtpy_synth.winterbloom_smolmidi as smolmidi
 
 midi_notes = (33, 45, 52, 57)
 filter_freq = 4000
@@ -177,7 +177,6 @@ async def midi_handler():
             else:
                 print("unknown message:",msg)
         await asyncio.sleep(0)
-
 
 
 # main coroutine
