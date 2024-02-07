@@ -1,0 +1,5 @@
+asyncio
+neopixel
+adafruit_wave
+adafruit_debouncer
+adafruit_displayio_ssd1306
