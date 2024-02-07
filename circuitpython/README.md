@@ -4,7 +4,7 @@ qtpy_synth circuitpython
 
 In the "examples" directory are a collection of example synths to run on the qtpy_synth board.
 
-These exmaples include:
+These examples include:
 - "[hwtest](./examples/hwtest)" -- check that all hardware parts work
 - "[simpletouchsynth](./examples/simpletouchsynth)" -- very simple single-patch synth with adjustable filter
 - "[wavesynth](./examples/wavesynth)" -- wavetable synthesizer with GUI and wavetable selection
