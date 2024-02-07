@@ -13,8 +13,9 @@ These exmaples include:
 
 To run these examples:
 
-1. Copy the "qtpy_synth" directory in this directory to the CIRCUITPY drive
-2. Install external libraries. They are listed in `requirements.txt'.
+1. Copy the `qtpy_synth` directory in this directory to the CIRCUITPY drive
+2. Copy the `code.py` file and any files from the example to the CIRCUITPY drive
+3. Install external libraries. They are listed in `requirements.txt'.
 The easiest way to install them is with `circup` on the commandline:
     ```sh
     circup install -r requirements.txt
