@@ -83,8 +83,7 @@ class QTPySynthHardware():
     def check_touch(self):
         """Check the four touch inputs, return keypad-like Events"""
         events = []
-        for i in 0,1,2,3:
-            touch = self.touches[i]
+        for i,touch in enumerate(self.touches)
             touch.update()
             if touch.rose:
                 events.append(keypad.Event(i,True))

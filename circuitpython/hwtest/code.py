@@ -6,13 +6,14 @@
 # - middle button triggers random synth notes
 # - left knob controls filter cutoff
 # - right knob controls filter resonance
-# - sending TRS UART MIDI will print out those bytes to the REPL
+# - sending MIDI via USB or TRS UART MIDI will print MIDI messages to REPL and play simple tones
 #
 # Libaries needed:
 # - asyncio
 # - adafruit_debouncer
 # - adafruit_displayio_ssd1306
 # - adafruit_display_text
+# - winterbloom_smolmidi   (included, but from https://github.com/wntrblm/Winterbloom_SmolMIDI)
 # Install them all with:
 #   circup install asyncio adafruit_debouncer adafruit_displayio_ssd1306 adafruit_display_text
 #
@@ -28,6 +29,8 @@ import adafruit_displayio_ssd1306
 from adafruit_display_text import bitmap_label as label
 import touchio
 from adafruit_debouncer import Debouncer
+import usb_midi
+import winterbloom_smolmidi as smolmidi
 
 midi_notes = (33, 45, 52, 57)
 filter_freq = 4000
@@ -49,7 +52,7 @@ for pin in touch_pins:
     touchins.append(touchin)
     touchs.append( Debouncer(touchin) )
 
-uart = busio.UART(rx=board.RX, baudrate=31250, timeout=0.001)
+midi_uart = busio.UART(rx=board.RX, baudrate=31250, timeout=0.001)
 i2c = busio.I2C(scl=board.SCL, sda=board.SDA, frequency=1_000_000 )
 
 dw,dh = 128, 64
@@ -65,6 +68,10 @@ synth = synthio.Synthesizer(sample_rate=28000)
 audio.play(mixer)
 mixer.voice[0].level = 0.75 # turn down the volume a bit since this can get loud
 mixer.voice[0].play(synth)
+
+# set up MIDI inputs
+midi_usb_in = smolmidi.MidiIn(usb_midi.ports[0])
+midi_uart_in = smolmidi.MidiIn(midi_uart)
 
 # set up the synth
 wave_saw = np.linspace(30000,-30000, num=256, dtype=np.int16)  # default squ is too clippy
@@ -101,10 +108,12 @@ def check_touch():
 async def debug_printer():
     while True:
         text1.text = "K:%3d %3d S:%d" % (knobA.value//255, knobB.value//255, sw_pressed)
-        text2.text = "T:" + ''.join(["%3d " % v for v in (touchins[0].raw_value//16, touchins[1].raw_value//16, touchins[2].raw_value//16, touchins[3].raw_value//16)])
+        text2.text = "T:" + ''.join(["%3d " % v for v in (
+            touchins[0].raw_value//16, touchins[1].raw_value//16,
+            touchins[2].raw_value//16, touchins[3].raw_value//16)])
         print(text1.text)
         print(text2.text)
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(1)
 
 async def input_handler():
     global sw_pressed
@@ -133,17 +142,49 @@ async def input_handler():
                 synth.press(note)
         await asyncio.sleep(0.01)
 
-async def uart_handler():
+
+async def midi_handler():
+    notes_pressed = {}
     while True:
-        while msg := uart.read(3):
-            print("midi:", [hex(b) for b in msg])
+        while msg := midi_uart_in.receive() or midi_usb_in.receive():
+            if msg.type == smolmidi.NOTE_ON:
+                chan = msg.channel
+                note = msg.data[0]
+                vel = msg.data[1]
+                print('NoteOn: Ch: {} Note: {} Vel:{}'.format(chan, note, vel))
+                synth.press( note )
+            elif msg.type == smolmidi.NOTE_OFF:
+                chan = msg.channel
+                note = msg.data[0]
+                vel = msg.data[1]
+                print('NoteOff: Ch: {} Note: {} Vel:{}'.format(chan, note, vel))
+                synth.release( note )
+            elif msg.type == smolmidi.PITCH_BEND:
+                chan = msg.channel
+                pbval = (msg.data[1] << 7) | msg.data[0]
+                print("PitchBend: Ch: {} Bend: {}".format(chan, pbval))
+            elif msg.type == smolmidi.CC:
+                chan = msg.channel
+                ccnum = msg.data[0]
+                ccval = msg.data[1]
+                print('CC Ch: {}, Num: {} Val: {}'.format(chan, ccnum, ccval))
+            elif msg.type == smolmidi.CHANNEL_PRESSURE:
+                chan = msg.channel
+                press_val = msg.data[0]
+                print('Ch Pressure: Ch: {}, Val: {}'.format(chan, press_val))
+            elif msg.type == smolmidi.SYSTEM_RESET:
+                print('System reset')
+            else:
+                print("unknown message:",msg)
         await asyncio.sleep(0)
+
+
 
 # main coroutine
 async def main():  # Don't forget the async!
     task1 = asyncio.create_task(debug_printer())
     task2 = asyncio.create_task(input_handler())
-    task3 = asyncio.create_task(uart_handler())
+    task3 = asyncio.create_task(midi_handler())
     await asyncio.gather(task1,task2,task3)
 
 print("hello qtpy_synth hwtest")

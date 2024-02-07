@@ -47,6 +47,8 @@ The parts you need to add are:
   * [This male & female header kit looks pretty good](https://amzn.to/3qqbtiO),
     as I prefer to put female headers on the PCB and male headers on the QTPy and OLED display.
     You may need to trim down your headers to be the right size.
+* Feet. I like M2.5 nylon standoffs  (e.g. [M2.5 standoff asst kit](https://amzn.to/45qVjFb))
+  but feel free to do what you like, including making an enclosure!
 
 
 ### Pins used
