@@ -23,10 +23,10 @@ Some programs written specifically for this board:
 - [simpletouchsynth](./circuitpython/examples/simpletouchsynth) - play with filters using touch sensors. Uses intial cut at a "qtpy_synth" hardware library.
 
 - [wavesynth](./circuitpython/examples/wavesynth) - larger general two-osc synth that can also do wave-mixing and wavetables. Has many rough edges but can sound great!
-  - early demo:
+  - early video demo:
   
     [![Wavetable synth w/ CircuitPython synthio on QTPy RP2040](http://img.youtube.com/vi/4hgDi6MNfsI/0.jpg)](https://www.youtube.com/watch?v=4hgDi6MNfsI)]
-  - another demo:
+  - another video demo:
   
     [![More Wavetable synth w/ CircuitPython synthio on QTPy RP2040](http://img.youtube.com/vi/80yjwxscnnA/0.jpg)](https://www.youtube.com/watch?v=80yjwxscnnA)]
 
