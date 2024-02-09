@@ -20,15 +20,21 @@
 #
 import asyncio
 import time, random
-import board, busio
+import board
+# knobs
 import analogio, keypad
+# audio
 import audiopwmio, audiomixer, synthio
 import ulab.numpy as np
+# display
 import displayio, terminalio
 import adafruit_displayio_ssd1306
 from adafruit_display_text import bitmap_label as label
+# touch
 import touchio
 from adafruit_debouncer import Debouncer
+# midi
+import busio
 import usb_midi
 import qtpy_synth.winterbloom_smolmidi as smolmidi
 
@@ -111,9 +117,8 @@ async def debug_printer():
         text2.text = "T:" + ''.join(["%3d " % v for v in (
             touchins[0].raw_value//16, touchins[1].raw_value//16,
             touchins[2].raw_value//16, touchins[3].raw_value//16)])
-        print(text1.text)
-        print(text2.text)
-        await asyncio.sleep(1)
+        print(text1.text, text2.text)
+        await asyncio.sleep(0.3)
 
 async def input_handler():
     global sw_pressed
@@ -135,11 +140,13 @@ async def input_handler():
             if key.released:
                 sw_pressed = False
                 synth.release( note )
+                print("button release!")
             if key.pressed:
                 sw_pressed = True
                 f = synthio.midi_to_hz(random.randint(32,60))
                 note = synthio.Note(frequency=f, waveform=wave_saw) # , filter=filter)
                 synth.press(note)
+                print("button press!")
         await asyncio.sleep(0.01)
 
 
