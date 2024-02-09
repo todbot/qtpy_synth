@@ -3,7 +3,9 @@
 A simple [QTPy RP2040](https://learn.adafruit.com/adafruit-qt-py-2040/overview)-based
 synth to experiment with [`synthio`](https://github.com/todbot/circuitpython-synthio-tricks).
 
-<img src="./docs/qtpy_synth_proto2a.jpg" width=500>
+<img width=500 src="./docs/qtpy_synth_case1.jpg">
+
+<a href="https://www.tindie.com/stores/todbot/qtpy_synth?ref=offsite_badges&utm_source=sellers_todbot&utm_medium=badges&utm_campaign=badge_small"><img src="https://d2ss6ovg47m0r5.cloudfront.net/badges/tindie-smalls.png" alt="I sell on Tindie" width="100" height="26"></a>
 
 ### Features
  - Mono audio output circuit, converting PWM to audio, as per [RP2040 design guidelines](https://datasheets.raspberrypi.com/rp2040/hardware-design-with-rp2040.pdf#page=24)
@@ -30,7 +32,8 @@ Some programs written specifically for this board:
 
 ### Building it
 
-The [Tindie version is a partially-assembled PCB](https://www.tindie.com/products/todbot/qtpy_synth/).
+The [Tindie version is a partially-assembled PCB](https://www.tindie.com/products/todbot/qtpy_synth/). <a href="https://www.tindie.com/stores/todbot/qtpy_synth?ref=offsite_badges&utm_source=sellers_todbot&utm_medium=badges&utm_campaign=badge_small"><img src="https://d2ss6ovg47m0r5.cloudfront.net/badges/tindie-smalls.png" alt="I sell on Tindie" width="100" height="26"></a>
+
 
 The completely assembled SMD sections of the board are:
 
@@ -49,6 +52,8 @@ The parts you need to add are:
     You may need to trim down your headers to be the right size.
 * Feet. I like M2.5 nylon standoffs  (e.g. [M2.5 standoff asst kit](https://amzn.to/45qVjFb))
   but feel free to do what you like, including making an enclosure!
+* Or [3d-print a simple case](https://www.printables.com/model/757087-case-for-qtpy_synth-circuitpython-synthesizer) for it! I also like these [3d-printed knobs](https://www.thingiverse.com/thing:5759656)
+
 
 
 ### Pins used
