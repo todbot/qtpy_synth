@@ -403,7 +403,6 @@ class WavePolyTwoOsc(Instrument):
         self.synth.blocks.append(filt_env) # not tracked automaticallly by synthio
 
     def note_off(self, midi_note, midi_vel=0):
-        print("note_off:", midi_note)
         (osc1,osc2,filt_env,amp_env) = self.voices.get(midi_note, (None,None,None,None)) # FIXME
         #print("note_off:",osc1)
         if osc1:  # why this check? in case user tries to note_off a non-existant note

@@ -19,11 +19,9 @@ import displayio
 import adafruit_displayio_ssd1306
 
 SAMPLE_RATE = 25600   # lets try powers of two
+#SAMPLE_RATE = 22050   # lets try powers of two
 MIXER_BUFFER_SIZE = 4096
 DW,DH = 128, 64  # display width/height
-
-# note: we're hanging on to some of the interstitial objects like 'i2c' & 'display_bus'
-# even though we shouldn't, because I think the gc will collect it unless we hold on to it
 
 class Hardware():
     def __init__(self):
@@ -38,27 +36,33 @@ class Hardware():
         self.touchins = []  # for raw_value
         self.touches = []   # for debouncer
         for pin in (board.A3, board.A2, board.MISO, board.SCK):
-           touchin = touchio.TouchIn(pin)
-           # touchin.threshold = int(touchin.threshold * 1.1) # noise protection
-           self.touchins.append(touchin)
-           self.touches.append( Debouncer(touchin) )
+            touchin = touchio.TouchIn(pin)
+            touchin.threshold = int(touchin.threshold * 1.1)  # noise protec
+            self.touchins.append(touchin)
+            self.touches.append(Debouncer(touchin))
 
         self.midi_uart = busio.UART(rx=board.RX, baudrate=31250, timeout=0.001)
 
         displayio.release_displays()
         i2c = busio.I2C(scl=board.SCL, sda=board.SDA, frequency=400_000 )
         display_bus = displayio.I2CDisplay(i2c, device_address=0x3c )
-        self.display = adafruit_displayio_ssd1306.SSD1306(display_bus, width=DW, height=DH, rotation=180)
+        self.display = adafruit_displayio_ssd1306.SSD1306(display_bus,
+                                                          width=DW, height=DH,
+                                                          rotation=180)
 
         # now do audio setup so we have minimal audible glitches
         self.audio = audiopwmio.PWMAudioOut(board.MOSI)
-        self.mixer = audiomixer.Mixer(sample_rate=SAMPLE_RATE, voice_count=1, channel_count=1,
-                                     bits_per_sample=16, samples_signed=True,
-                                     buffer_size=MIXER_BUFFER_SIZE)
+        self.mixer = audiomixer.Mixer(sample_rate=SAMPLE_RATE,
+                                      voice_count=1, channel_count=1,
+                                      bits_per_sample=16, samples_signed=True,
+                                      buffer_size=MIXER_BUFFER_SIZE)
         self.synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE)
         self.audio.play(self.mixer)
         self.mixer.voice[0].play(self.synth)
-
+        
+    def set_volume(self,v):
+        self.mixer.voice[0].level = v
+        
     def check_key(self):
         return self.keys.events.get()
 

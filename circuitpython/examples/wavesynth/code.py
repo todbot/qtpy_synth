@@ -23,6 +23,11 @@ import qtpy_synth.winterbloom_smolmidi as smolmidi
 
 from wavesynth_display import WavesynthDisplay
 
+import microcontroller
+microcontroller.cpu.frequency = 250_000_000
+
+time.sleep(2)  # let USB settle down
+
 touch_midi_notes = [40, 48, 52, 55] # can be float
 
 patch1 = Patch('oneuno')
@@ -31,7 +36,7 @@ patch3 = Patch('three')
 patch4 = Patch('fourfor')
 patches = (patch1, patch2, patch3, patch4)
 
-patch1.filt_env_params.attack_time = 0.5
+patch1.filt_env_params.attack_time = 0.1
 patch1.amp_env_params.attack_time = 0.01
 
 patch2.filt_type = FiltType.HP
@@ -77,16 +82,19 @@ async def midi_handler():
     while True:
         while msg := midi_usb_in.receive() or midi_uart_in.receive():
             if msg.type == smolmidi.NOTE_ON:
-                inst.note_on(msg.note)
+                inst.note_on(msg.data[0])
                 qts.led.fill(0xff00ff)
             elif msg.type == smolmidi.NOTE_OFF:
-                inst.note_off(msg.note)
+                inst.note_off(msg.data[0])
                 qts.led.fill(0x000000)
             elif msg.type == smolmidi.CC:
                 ccnum = msg.data[0]
                 ccval = msg.data[1]
+                qts.led.fill(ccval)
                 if ccnum == 71:  # "sound controller 1"
-                    inst.patch.wave_mix = ccval/127
+                    new_wave_mix = ccval/127
+                    print("wave_mix:", new_wave_mix)
+                    inst.patch.wave_mix = new_wave_mix
                 elif ccnum == 1: # mod wheel
                     inst.patch.wave_mix_lfo_amount = ccval/127 * 50
                     #inst.patch.wave_mix_lfo_rate = msg.value/127 * 5
