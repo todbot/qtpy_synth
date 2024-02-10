@@ -69,7 +69,7 @@ display = adafruit_displayio_ssd1306.SSD1306(display_bus, width=dw, height=dh, r
 audio = audiopwmio.PWMAudioOut(board.MOSI)
 mixer = audiomixer.Mixer(voice_count=1, sample_rate=28000, channel_count=1,
                          bits_per_sample=16, samples_signed=True,
-                         buffer_size=8192)  # buffer_size=4096)  # need a big buffer when screen updated
+                         buffer_size=4096)  # need a big buffer when screen updated
 synth = synthio.Synthesizer(sample_rate=28000)
 audio.play(mixer)
 mixer.voice[0].level = 0.75 # turn down the volume a bit since this can get loud
@@ -103,8 +103,8 @@ def check_touch():
         if touch.rose:
             print("touch press",i)
             f = synthio.midi_to_hz(midi_notes[i])
-            filter = synth.low_pass_filter(filter_freq, filter_resonance)
-            n = synthio.Note( frequency=f, waveform=wave_saw, filter=filter )
+            filt = synth.low_pass_filter(filter_freq, filter_resonance)
+            n = synthio.Note( frequency=f, waveform=wave_saw, filter=filt)
             synth.press( n )
             touch_notes[i] = n
         if touch.fell:
@@ -117,7 +117,7 @@ async def debug_printer():
         text2.text = "T:" + ''.join(["%3d " % v for v in (
             touchins[0].raw_value//16, touchins[1].raw_value//16,
             touchins[2].raw_value//16, touchins[3].raw_value//16)])
-        print(text1.text, text2.text)
+        print(text1.text, text2.text, midi_usb_in._error_count)
         await asyncio.sleep(0.3)
 
 async def input_handler():
@@ -151,7 +151,6 @@ async def input_handler():
 
 
 async def midi_handler():
-    notes_pressed = {}
     while True:
         while msg := midi_uart_in.receive() or midi_usb_in.receive():
             if msg.type == smolmidi.NOTE_ON:
