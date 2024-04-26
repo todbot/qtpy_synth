@@ -18,11 +18,13 @@ synth to experiment with [`synthio`](https://github.com/todbot/circuitpython-syn
 ### Software
 Some programs written specifically for this board:
 
-- [hwtest](./circuitpython/examples/hwtest/code.py) - test out the hardware with a simple synth
+- [hwtest](./circuitpython/hwtest/code.py) - test out the hardware with a simple synth
 
-- [simpletouchsynth](./circuitpython/examples/simpletouchsynth) - play with filters using touch sensors. Uses intial cut at a "qtpy_synth" hardware library.
+- [simpletouchsynth](./circuitpython/simpletouchsynth) - play with filters using touch sensors. Uses intial cut at a "qtpy_synth" hardware library.
 
-- [wavesynth](./circuitpython/examples/wavesynth) - larger general two-osc synth that can also do wave-mixing and wavetables. Has many rough edges but can sound great!
+- [dronesynth](./circuitpython/dronesynth) - 8-oscillator drone synth
+
+- [wavesynth](./circuitpython/wavesynth) - larger general two-osc synth that can also do wave-mixing and wavetables. Has many rough edges but can sound great!
   - early video demo:
   
     [![Wavetable synth w/ CircuitPython synthio on QTPy RP2040](http://img.youtube.com/vi/4hgDi6MNfsI/0.jpg)](https://www.youtube.com/watch?v=4hgDi6MNfsI)]
