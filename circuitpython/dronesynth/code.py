@@ -61,14 +61,16 @@ button_held_time = 0
 # set up display with our chunks of info
 disp_group = displayio.Group()
 qts.display.root_group = disp_group
-labels_pos = ( (5,5), (45,5), #(95,5),
-               (5,18), (45,18), #(95,18),
-               (5,30), (45,30), #(95,30),
-               (5,42), (45,42), #(95,42),
-               (115,5) ) 
+labels_pos = ( (5,5), (45,5),
+               (5,18), (45,18),
+               (5,30), (45,30),
+               (5,42), (45,42),
+               (78,5), (78,18), (78,30), (78,42),
+               (115,5) # dronesynth logo vertical
+              ) 
 disp_info = displayio.Group()
 for (x,y) in labels_pos:
-    disp_info.append( label.Label(terminalio.FONT, text="123.4", x=x, y=y) )
+    disp_info.append( label.Label(terminalio.FONT, text="--", x=x, y=y) )
 disp_group.append(disp_info)
 disp_info[-1].text = "dronesynth"
 disp_info[-1].label_direction = "UPR"
@@ -78,8 +80,12 @@ def display_update():
         for j in range(oscs_per_pad):
             new_str = "%.1f" % voice_vals[i][j]
             old_str = disp_info[i*oscs_per_pad + j].text 
-            if new_str != old_str: 
+            if new_str != old_str:
                 disp_info[i*oscs_per_pad + j].text = new_str
+            onoff = "on" if droney.voices[i][0].amplitude else "--"
+            if disp_info[8+i].text != onoff:
+                disp_info[8+i].text = onoff
+
     
 def converge_vals(speed=0.1):
     pass
@@ -101,9 +107,15 @@ for i in range(num_pads):
 scalerA = ParamScaler(voice_vals[0][0], knobA_val)
 scalerB = ParamScaler(voice_vals[0][1], knobB_val)
 
+globalA_val = knobA_val
+globalB_val = knobB_val
 
 display_update()
 
+debug = False
+def dbg(*args):
+    if debug: print(*args)
+    
 while True:
     time.sleep(0.001)
     
@@ -112,22 +124,24 @@ while True:
     # if we're pressing a pad
     if pad_num is not None: 
         
-        valA = scalerA.update(knobA_val)
+        valA = scalerA.update(knobA_val) #, debug=True)
         valB = scalerB.update(knobB_val)
         
-        print("knobA:%.1f knobB:%.1f  valA:%.1f  valB:%.1f" %
-              (knobA_val, knobB_val, valA, valB))
+        dbg("knobA:%.1f knobB:%.1f  valA:%.1f  valB:%.1f" %
+            (knobA_val, knobB_val, valA, valB))
 
-        freqs = get_freqs_by_knobs(valA,valB)
+        freqs = get_freqs_by_knobs(valA,valB) # , note_offset)
         droney.set_voice_freqs(pad_num, freqs)
 
         voice_vals[touch.key_number] = [valA,valB]
         display_update()
         
     else:
+        globalA_val = scalerA.update(knobA_val)
+        globalB_val = scalerB.update(knobB_val) # , debug=True)
+        #dbg("global: %1.f %1.f" %(globalA_val, globalB_val))
         #droney.set_pitch_lfo_amount(knobB_val/255)
-        pass
-
+        #note_offset = (globalA_val/255) * 24
 
     if touches := qts.check_touch():
         for touch in touches:
@@ -141,6 +155,9 @@ while True:
 
             if touch.released:
                 pad_num = None
+                # restore the global vals
+                scalerA.reset(globalA_val, knobA_val)
+                scalerB.reset(globalB_val, knobB_val)
 
     if key := qts.check_key():
         if key.pressed:

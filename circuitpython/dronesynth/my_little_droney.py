@@ -22,11 +22,12 @@ def hz_to_midi(f):
     return 12 * (math.log(f,2) - math.log(440,2)) + 69
 
     
-def get_freqs_by_knobs(valA,valB):
+def get_freqs_by_knobs(valA,valB, note_offset=12):
     """ create a list of frequencies based on two 0-255 inputs """
+    n = (valA/255) * 60
     d = 0.01 + (valB / 255) * 12
-    f1 = synthio.midi_to_hz( 12 + valA/4 )
-    f2 = synthio.midi_to_hz( 12 + valA/4 + d )
+    f1 = synthio.midi_to_hz( note_offset + n )
+    f2 = synthio.midi_to_hz( note_offset + n + d )
     return (f1, f2)
 
 def get_wave(wave_type):

@@ -41,10 +41,6 @@ Example:
 knob_min, knob_max = 0, 255
 val_min, val_max = 0, 255
 
-dbg_scaler = False
-def dbg(*args):
-    if dbg_scaler: print(*args)
-
 class ParamScaler:
     def __init__(self, val_start, knob_pos):
         """ Make a ParamScaler, val and knob_pos range from 0-255, floating point """
@@ -61,12 +57,15 @@ class ParamScaler:
             self.last_knob_pos = knob_pos
         self.knob_match = False
 
-    def update(self, knob_pos):
+    def update(self, knob_pos, debug=False):
         """
         Call whenever knob_position changes.
         Returns a value scale in direction of knob turn
         """
-        dbg("knob_pos:%3d last:%3d val:%.1f" % (knob_pos, self.last_knob_pos, self.val))
+        if debug:
+            print("knob_pos:%.1f last:%3d val:%.1f" % (knob_pos, self.last_knob_pos, self.val))
+
+        knob_pos = min(max(knob_pos,knob_min),knob_max)  # ensure within bounds
         
         knob_delta = knob_pos - self.last_knob_pos
         
@@ -81,8 +80,9 @@ class ParamScaler:
         val_delta_pos  = (val_max - self.val)
         val_delta_neg  = (self.val - val_min)
 
-        dbg("deltas: %.1f   %.1f %.1f, %.1f %.1f" %
-            (knob_delta, knob_delta_pos,knob_delta_neg, val_delta_pos,val_delta_neg))
+        if debug:
+            print("deltas: %.1f   %.1f %.1f, %.1f %.1f" %
+                  (knob_delta, knob_delta_pos,knob_delta_neg, val_delta_pos,val_delta_neg))
         
         val_change = 0
         if knob_delta > self.dead_zone and knob_delta_pos != 0:
@@ -90,7 +90,7 @@ class ParamScaler:
         elif knob_delta < -self.dead_zone and knob_delta_neg != 0:
             val_change = (knob_delta * val_delta_neg) / knob_delta_neg
             
-        dbg("val_change:%.1f" % val_change)
+        if debug: print("val_change:%.1f" % val_change)
         self.val = min(max(self.val + val_change, val_min), val_max)
         return self.val
 
