@@ -85,11 +85,9 @@ class ParamScaler:
             (knob_delta, knob_delta_pos,knob_delta_neg, val_delta_pos,val_delta_neg))
         
         val_change = 0
-        if knob_delta > self.dead_zone:
-            #val_change = (knob_delta / knob_delta_pos) * val_delta_pos
+        if knob_delta > self.dead_zone and knob_delta_pos != 0:
             val_change = (knob_delta * val_delta_pos) / knob_delta_pos
-        elif knob_delta < -self.dead_zone:
-            #val_change = (knob_delta / knob_delta_neg) * val_delta_neg
+        elif knob_delta < -self.dead_zone and knob_delta_neg != 0:
             val_change = (knob_delta * val_delta_neg) / knob_delta_neg
             
         dbg("val_change:%.1f" % val_change)

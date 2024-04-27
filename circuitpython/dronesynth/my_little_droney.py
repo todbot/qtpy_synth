@@ -3,6 +3,7 @@ A Drone Synth
 
 """
 import math
+import random
 import synthio
 import ulab.numpy as np
 
@@ -47,28 +48,34 @@ def make_filter(synth,cfg):
         print("unknown filter type", cfg.filter_type)
     return filter
 
+
 class MyLittleDroney():
     """
+    Drone Synth
     """
     def __init__(self, synth, synth_config, num_voices, oscs_per_voice):
-       self.voices = {}
-       for i in range(num_voices):
-           oscs = []
-           freqs = get_freqs_by_knobs(127,0)  # fake values
-           wave = get_wave(synth_config.wave_type)
-           
-           for j in range(oscs_per_voice):
-               f = freqs[j]
-               osc = synthio.Note(frequency=f, waveform=wave,
-                                  filter=make_filter(synth,synth_config))
-               synth.press(osc)
-               oscs.append(osc)
-               self.voices[i] = oscs
-               
-    def update(self):
-        pass
+        self.voices = []
+        for i in range(num_voices):
+            oscs = []
+            freqs = get_freqs_by_knobs(127,0)  # fake values
+            wave = get_wave(synth_config.wave_type)
+            
+            for j in range(oscs_per_voice):
+                f = freqs[j]
+                pitch_lfo = synthio.LFO(rate=0.1, scale=0.02, phase_offset=random.uniform(0,1))
+                osc = synthio.Note(frequency=f, waveform=wave,
+                                   bend=pitch_lfo,
+                                   filter=make_filter(synth,synth_config))
+                synth.press(osc)
+                oscs.append(osc)
+            self.voices.append(oscs)
 
     def set_voice_freqs(self,n,freqs):
+        for i,osc in enumerate(self.voices[n]):
+            osc.frequency = freqs[i]
+
+    def set_voice_notes(self,n,notes):
+        freqs = [synthio.midi_to_hz(n) for n in notes]
         for i,osc in enumerate(self.voices[n]):
             osc.frequency = freqs[i]
         
@@ -80,6 +87,22 @@ class MyLittleDroney():
         # fixme: what about other levels than 0,1
         for osc in self.voices[n]:
             osc.amplitude = 0 if osc.amplitude > 0 else 1
+
+    def print_freqs(self):
+        for i in range(len(self.voices)):
+            print("%d: " % i, end='')
+            oscs = self.voices[i]
+            for osc in oscs:
+                print("%.2f, " % osc.frequency, end='')
+            print()
+            
+    def set_pitch_lfo_amount(self,n):
+        for voice in self.voices:
+            for osc in voice:
+                osc.bend.scale = n
+        
+            
+
 
     # def converge_voices(self, speed=0.1):
     #     """ Move the voices' oscillator frequencies toward first oscillator.

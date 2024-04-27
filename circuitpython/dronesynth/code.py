@@ -31,11 +31,12 @@ from qtpy_synth.hardware import Hardware
 from param_scaler import ParamScaler
 from my_little_droney import MyLittleDroney, get_freqs_by_knobs
 
-#import microcontroller
-#microcontroller.cpu.frequency = 250_000_000  # overclock! vrrroomm
+import microcontroller
+microcontroller.cpu.frequency = 250_000_000  # overclock! vrrroomm
 
-num_pads = 2
+num_pads = 4
 oscs_per_pad = 2
+initial_vals = (100, 100+7, 100+5, 100+12)
 
 class SynthConfig():
     def __init__(self):
@@ -48,56 +49,63 @@ class SynthConfig():
 qts = Hardware()
 cfg = SynthConfig()
 
-droney = MyLittleDroney(qts.synth, cfg, num_pads, oscs_per_pad)
+droney = MyLittleDroney(qts.synth, cfg, num_pads, oscs_per_pad) #, initial_notes)
+
+pad_num = None  # which pad is currently being touched
+voice_vals = []  # scaled knob vals per pad, index = pad number, val = [valA,valB]
+button_held = False
+button_held_time = 0
 
 # -----------------------------
 
-# set up display with our 3 chunks of info
+# set up display with our chunks of info
 disp_group = displayio.Group()
 qts.display.root_group = disp_group
-
-labels_pos = ( (5,5), (50,5), (100,5), (15,50) )  #  filter_f, filter_type, filter_q,  hellotext
+labels_pos = ( (5,5), (45,5), #(95,5),
+               (5,18), (45,18), #(95,18),
+               (5,30), (45,30), #(95,30),
+               (5,42), (45,42), #(95,42),
+               (115,5) ) 
 disp_info = displayio.Group()
 for (x,y) in labels_pos:
-    disp_info.append( label.Label(terminalio.FONT, text="-", x=x, y=y) )
+    disp_info.append( label.Label(terminalio.FONT, text="123.4", x=x, y=y) )
 disp_group.append(disp_info)
-disp_info[3].text = "dronesynth"
+disp_info[-1].text = "dronesynth"
+disp_info[-1].label_direction = "UPR"
 
 def display_update():
-    f_str = "%4d" % (cfg.filter_f + cfg.filter_mod)
-    q_str = "%1.1f" % cfg.filter_q
-
-    if f_str != disp_info[0].text:
-        disp_info[0].text = f_str
-
-    if cfg.filter_type != disp_info[1].text:
-        disp_info[1].text = cfg.filter_type
-
-    if q_str != disp_info[2].text:
-        disp_info[2].text = q_str
-        print("edit q", q_str)
-
-def converge_freqs(speed=0.1):
+    for i in range(num_pads):
+        for j in range(oscs_per_pad):
+            new_str = "%.1f" % voice_vals[i][j]
+            old_str = disp_info[i*oscs_per_pad + j].text 
+            if new_str != old_str: 
+                disp_info[i*oscs_per_pad + j].text = new_str
+    
+def converge_vals(speed=0.1):
     pass
 
 # --------------------------------------------------------
 
-pad_num = None  # which pad is currently being touched
-vals = {}  # scaled knob vals per pad, key = pad number, val = [valA,valB]
 # get initial knob vals for the scalers
 (knobA_val, knobB_val) = [v/256 for v in qts.read_pots()]
 
-scalerA = ParamScaler(knobA_val, knobA_val)
-scalerB = ParamScaler(knobB_val, knobB_val)
-
 for i in range(num_pads):
-    vals[i] = (knobA_val, knobB_val)
+    vs = [initial_vals[i], 0]
+    voice_vals.append(vs)
+    
+    # set up default freqs in droney
+    freqs = get_freqs_by_knobs(*vs)
+    print("freqs:", freqs)
+    droney.set_voice_freqs(i, freqs)
 
-button_held = False
-button_held_time = 0
+scalerA = ParamScaler(voice_vals[0][0], knobA_val)
+scalerB = ParamScaler(voice_vals[0][1], knobB_val)
+
+
+display_update()
 
 while True:
-    time.sleep(0.01)
+    time.sleep(0.001)
     
     (knobA_val, knobB_val) = [v/256 for v in qts.read_pots()]
     
@@ -107,12 +115,19 @@ while True:
         valA = scalerA.update(knobA_val)
         valB = scalerB.update(knobB_val)
         
-        print("knobA:%.1f knobB:%.1f  valA:%.1f  valB:%.1f" %(knobA_val,knobB_val,valA,valB))
+        print("knobA:%.1f knobB:%.1f  valA:%.1f  valB:%.1f" %
+              (knobA_val, knobB_val, valA, valB))
 
         freqs = get_freqs_by_knobs(valA,valB)
         droney.set_voice_freqs(pad_num, freqs)
 
-        vals[pad_num] = [valA,valB]
+        voice_vals[touch.key_number] = [valA,valB]
+        display_update()
+        
+    else:
+        #droney.set_pitch_lfo_amount(knobB_val/255)
+        pass
+
 
     if touches := qts.check_touch():
         for touch in touches:
@@ -120,9 +135,9 @@ while True:
             if touch.pressed:
                 pad_num = touch.key_number
                 # restore vals for this pad 
-                lastA, lastB = vals[pad_num]  
-                scalerA.reset( lastA, knobA_val)
-                scalerB.reset( lastB, knobB_val)
+                lastA, lastB = voice_vals[pad_num]  
+                scalerA.reset(lastA, knobA_val)
+                scalerB.reset(lastB, knobB_val)
 
             if touch.released:
                 pad_num = None
@@ -132,9 +147,10 @@ while True:
             print("button!")
             button_held = True
             button_held_time = time.monotonic()
+            droney.print_freqs()
             if pad_num is not None: # pressing a pad toggles voice
                 droney.toggle_voice_mute(pad_num)
-                pass
+
             
         if key.released:
             button_held = False
@@ -142,21 +158,22 @@ while True:
 
     button_time_delta = time.monotonic() - button_held_time
     if button_held and button_time_delta > 1:
-        print("drone freqs")
-        # for k,oscs in voices.items():
-        #     print("%d: " % k, end='')
-        #     for osc in oscs:
-        #         print("%.2f, " % osc.frequency, end='')
+        # print("drone freqs")
+        # for i,vs in enumerate(voice_vals):
+        #     print("%d: " % i, end='')
+        #     for v in vs:
+        #         print("%.2f, " % v, end='')
         #     print()
-
-        # oscf = voices[0][0].frequency
-        # ff = 0.99
-        # for i in range(1,num_keys):
-        #     voices[i][0].frequency = ff * voices[i][0].frequency + (1-ff)*oscf
-        #     voices[i][1].frequency = ff * voices[i][1].frequency + (1-ff)*oscf
-        
-
-
+            
+        converge_valA, converge_valB = voice_vals[0]
+        cff = 0.05
+        for i in range(1,num_pads):
+            voice_vals[i][0] = cff*converge_valA + (1-cff)*voice_vals[i][0]
+            freqs = get_freqs_by_knobs(*voice_vals[i])
+            droney.set_voice_freqs(i, freqs)
+            display_update()
+            
+            
 
 
 
