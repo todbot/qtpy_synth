@@ -33,12 +33,15 @@ Example:
        
 """
 
-from micropython import const
+#from micropython import const
 
-knob_min, knob_max = const(0), const(255) 
-val_min, val_max = const(0), const(255) 
+#knob_min, knob_max = const(0), const(255) 
+#val_min, val_max = const(0), const(255) 
 
-dbg_scaler = True
+knob_min, knob_max = 0, 255
+val_min, val_max = 0, 255
+
+dbg_scaler = False
 def dbg(*args):
     if dbg_scaler: print(*args)
 
@@ -78,16 +81,18 @@ class ParamScaler:
         val_delta_pos  = (val_max - self.val)
         val_delta_neg  = (self.val - val_min)
 
-        dbg("deltas: %.1f %.1f, %.1f %.1f" %
-              (knob_delta_pos,knob_delta_neg, val_delta_pos,val_delta_neg))
+        dbg("deltas: %.1f   %.1f %.1f, %.1f %.1f" %
+            (knob_delta, knob_delta_pos,knob_delta_neg, val_delta_pos,val_delta_neg))
         
         val_change = 0
         if knob_delta > self.dead_zone:
-            val_change = (knob_delta / knob_delta_pos) * val_delta_pos
-        elif knob_delta < self.dead_zone:
-            val_change = (knob_delta / knob_delta_neg) * val_delta_neg
+            #val_change = (knob_delta / knob_delta_pos) * val_delta_pos
+            val_change = (knob_delta * val_delta_pos) / knob_delta_pos
+        elif knob_delta < -self.dead_zone:
+            #val_change = (knob_delta / knob_delta_neg) * val_delta_neg
+            val_change = (knob_delta * val_delta_neg) / knob_delta_neg
             
         dbg("val_change:%.1f" % val_change)
-        self.val = self.val + val_change
-        return min(max(self.val, val_min), val_max)
+        self.val = min(max(self.val + val_change, val_min), val_max)
+        return self.val
 
