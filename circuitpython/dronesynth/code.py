@@ -40,7 +40,7 @@ oscs_per_pad = 2
 note_offset = 12
 note_range = 60
 initial_vals = (note_to_knobval(36), note_to_knobval(48),
-                note_to_knobval(36), note_to_knobval(48))
+                note_to_knobval(36), note_to_knobval(60))
 
 qts = Hardware()
 cfg = SynthConfig()
@@ -91,14 +91,19 @@ def display_update():
 # get initial knob vals for the scalers
 (knobA_val, knobB_val) = [v/256 for v in qts.read_pots()]
 
+# set up the inital state of the voices
 for i in range(num_pads):
     vs = [initial_vals[i], 0]
     voice_vals.append(vs)
     
     # set up default freqs in droney
-    freqs = get_freqs_by_knobs(*vs)
+    freqs = get_freqs_by_knobs(vs[0],vs[1], note_offset, note_range)
     print("freqs:", freqs)
     droney.set_voice_freqs(i, freqs)
+
+# start with only two of the voices sounding
+droney.toggle_voice_mute(2)
+droney.toggle_voice_mute(3)
 
 scalerA = ParamScaler(voice_vals[0][0], knobA_val)
 scalerB = ParamScaler(voice_vals[0][1], knobB_val)
@@ -140,6 +145,8 @@ while True:
         #dbg("global: %1.f %1.f" %(globalA_val, globalB_val))
         #droney.set_pitch_lfo_amount(knobB_val/255)
         #note_offset = (globalA_val/255) * 24
+        f = 20 + (globalA_val/255) * 3000
+        droney.set_filter(f,None)
 
     # handle pad press
     if touches := qts.check_touch():

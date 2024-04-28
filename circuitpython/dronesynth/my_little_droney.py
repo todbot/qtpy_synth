@@ -1,7 +1,15 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024 Tod Kurt
+# SPDX-License-Identifier: MIT
 """
-A Drone Synth
+`my_little_droney`
+================================================================================
+
+`MyLittleDroney` is a multi-voice drone synth with multiple oscillators per voice.
+
+Part of qtpy_synth.
 
 """
+
 import math
 import random
 import synthio
@@ -18,17 +26,19 @@ wave_squ = np.concatenate((np.ones(wave_size // 2, dtype=np.int16) * wave_amp,
 # default squ is too clippy, should be 3dB down or so?
 
 def hz_to_midi(f):
-    """ since synthio doesn't provide this """
+    """ Convert Hz to MIDI note number float, synthio doesn't provide this """
     return 12 * (math.log(f,2) - math.log(440,2)) + 69
 
 def note_to_knobval(n, note_offset=12, note_range=60):
+    """ Turn a midi note number into a 'knobval' (0-255 float) """
     return (n-note_offset) * 255 / note_range
 
 def knobval_to_note(v, note_offset=12, note_range=60):
+    """ Turn a 'knobval' (0-255 float) into a float MIDI note number """
     return ((v/255) * note_range) + note_offset
    
 def get_freqs_by_knobs(valA,valB, note_offset=12, note_range=60):
-    """ create a list of frequencies based on two 0-255 inputs """
+    """ Create a list of frequencies based on two 0-255 inputs """
     n = knobval_to_note(valA, note_offset, note_range)
     d = 0.0001 + (valB / 255) * 2
     f1 = synthio.midi_to_hz( n )
@@ -58,9 +68,11 @@ class SynthConfig():
     def __init__(self):
         self.filter_type = 'lpf'
         self.filter_f = 2000
-        self.filter_q = 0.7
+        self.filter_q = 1.1
         self.filter_fmod = 500
         self.wave_type = 'saw'  # 'sin' or 'saw' or 'squ'
+        self.pitch_mod_rate = 0.1
+        self.pitch_mod_scale = 0.01
 
 class MyLittleDroney():
     """
@@ -121,15 +133,11 @@ class MyLittleDroney():
             for osc in voice:
                 osc.bend.scale = n
         
-            
-
-
-    # def converge_voices(self, speed=0.1):
-    #     """ Move the voices' oscillator frequencies toward first oscillator.
-    #     call repeatedly to get closer"""
-    #     basef = self.voices[0][0].frequency
-    #     for i in range(1,num_keys):
-    #     #     voices[i][0].frequency = ff * voices[i][0].frequency + (1-ff)*oscf
-    #     #     voices[i][1].frequency = ff * voices[i][1].frequency + (1-ff)*oscf
+    def set_filter(self,f,q):
+        self.cfg.filter_f = f
+        self.cfg.filter_q = q if q else self.cfg.filter_q
+        for voice in self.voices:
+            for osc in voice:
+                osc.filter = make_filter(self.synth, self.cfg)
 
         
