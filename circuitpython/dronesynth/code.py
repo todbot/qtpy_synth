@@ -29,22 +29,18 @@ from adafruit_display_text import bitmap_label as label
 from qtpy_synth.hardware import Hardware
 
 from param_scaler import ParamScaler
-from my_little_droney import MyLittleDroney, get_freqs_by_knobs
+from my_little_droney import (MyLittleDroney, SynthConfig,
+                              get_freqs_by_knobs, note_to_knobval, knobval_to_note)
 
 import microcontroller
 microcontroller.cpu.frequency = 250_000_000  # overclock! vrrroomm
 
 num_pads = 4
 oscs_per_pad = 2
-initial_vals = (100, 100+7, 100+5, 100+12)
-
-class SynthConfig():
-    def __init__(self):
-        self.filter_type = 'lpf'
-        self.filter_f = 2000
-        self.filter_q = 0.7
-        self.filter_mod = 0
-        self.wave_type = 'saw'  # 'sin' or 'saw' or 'squ'
+note_offset = 12
+note_range = 60
+initial_vals = (note_to_knobval(36), note_to_knobval(48),
+                note_to_knobval(36), note_to_knobval(48))
 
 qts = Hardware()
 cfg = SynthConfig()
@@ -77,18 +73,18 @@ disp_info[-1].label_direction = "UPR"
 
 def display_update():
     for i in range(num_pads):
-        for j in range(oscs_per_pad):
-            new_str = "%.1f" % voice_vals[i][j]
-            old_str = disp_info[i*oscs_per_pad + j].text 
-            if new_str != old_str:
-                disp_info[i*oscs_per_pad + j].text = new_str
-            onoff = "on" if droney.voices[i][0].amplitude else "--"
-            if disp_info[8+i].text != onoff:
-                disp_info[8+i].text = onoff
+        fstr = disp_info[i*2+0].text
+        dstr = disp_info[i*2+1].text
+        fstr_new = "%.1f" % knobval_to_note(voice_vals[i][0], note_offset, note_range)
+        dstr_new = "%.1f" % voice_vals[i][1]
+        if fstr_new != fstr:
+            disp_info[i*2+0].text = fstr_new
+        if dstr_new != dstr:
+            disp_info[i*2+1].text = dstr_new
+        onoff = "on" if droney.voices[i][0].amplitude else "--"
+        if disp_info[8+i].text != onoff:
+            disp_info[8+i].text = onoff
 
-    
-def converge_vals(speed=0.1):
-    pass
 
 # --------------------------------------------------------
 
@@ -113,15 +109,17 @@ globalB_val = knobB_val
 display_update()
 
 debug = False
-def dbg(*args):
-    if debug: print(*args)
-    
+def dbg(*args,**kwargs):
+    if debug: print(*args,**kwargs)
+
 while True:
     time.sleep(0.001)
+
+    #droney.update()
     
     (knobA_val, knobB_val) = [v/256 for v in qts.read_pots()]
     
-    # if we're pressing a pad
+    # handle held touch pad
     if pad_num is not None: 
         
         valA = scalerA.update(knobA_val) #, debug=True)
@@ -130,7 +128,7 @@ while True:
         dbg("knobA:%.1f knobB:%.1f  valA:%.1f  valB:%.1f" %
             (knobA_val, knobB_val, valA, valB))
 
-        freqs = get_freqs_by_knobs(valA,valB) # , note_offset)
+        freqs = get_freqs_by_knobs(valA, valB, note_offset, note_range)
         droney.set_voice_freqs(pad_num, freqs)
 
         voice_vals[touch.key_number] = [valA,valB]
@@ -143,6 +141,7 @@ while True:
         #droney.set_pitch_lfo_amount(knobB_val/255)
         #note_offset = (globalA_val/255) * 24
 
+    # handle pad press
     if touches := qts.check_touch():
         for touch in touches:
             
@@ -159,6 +158,7 @@ while True:
                 scalerA.reset(globalA_val, knobA_val)
                 scalerB.reset(globalB_val, knobB_val)
 
+    # handle tact button press
     if key := qts.check_key():
         if key.pressed:
             print("button!")
@@ -172,21 +172,23 @@ while True:
         if key.released:
             button_held = False
 
-
+    # handle button held 
     button_time_delta = time.monotonic() - button_held_time
     if button_held and button_time_delta > 1:
-        # print("drone freqs")
-        # for i,vs in enumerate(voice_vals):
-        #     print("%d: " % i, end='')
-        #     for v in vs:
-        #         print("%.2f, " % v, end='')
-        #     print()
-            
+        dbg("drone freqs")
+        for i,vs in enumerate(voice_vals):
+            dbg("%d: " % i, end='')
+            for v in vs:
+               dbg("%.2f, " % v, end='')
+            dbg()
+
+
+        # if button is held, convert the notes to pad1 note
         converge_valA, converge_valB = voice_vals[0]
         cff = 0.05
         for i in range(1,num_pads):
             voice_vals[i][0] = cff*converge_valA + (1-cff)*voice_vals[i][0]
-            freqs = get_freqs_by_knobs(*voice_vals[i])
+            freqs = get_freqs_by_knobs(voice_vals[i][0], voice_vals[i][1], note_offset, note_range)
             droney.set_voice_freqs(i, freqs)
             display_update()
             

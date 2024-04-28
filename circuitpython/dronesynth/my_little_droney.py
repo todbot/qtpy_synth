@@ -21,13 +21,18 @@ def hz_to_midi(f):
     """ since synthio doesn't provide this """
     return 12 * (math.log(f,2) - math.log(440,2)) + 69
 
-    
-def get_freqs_by_knobs(valA,valB, note_offset=12):
+def note_to_knobval(n, note_offset=12, note_range=60):
+    return (n-note_offset) * 255 / note_range
+
+def knobval_to_note(v, note_offset=12, note_range=60):
+    return ((v/255) * note_range) + note_offset
+   
+def get_freqs_by_knobs(valA,valB, note_offset=12, note_range=60):
     """ create a list of frequencies based on two 0-255 inputs """
-    n = (valA/255) * 60
-    d = 0.01 + (valB / 255) * 12
-    f1 = synthio.midi_to_hz( note_offset + n )
-    f2 = synthio.midi_to_hz( note_offset + n + d )
+    n = knobval_to_note(valA, note_offset, note_range)
+    d = 0.0001 + (valB / 255) * 2
+    f1 = synthio.midi_to_hz( n )
+    f2 = synthio.midi_to_hz( n + d )
     return (f1, f2)
 
 def get_wave(wave_type):
@@ -38,7 +43,7 @@ def get_wave(wave_type):
 filter_types = ['lpf', 'hpf', 'bpf']
 
 def make_filter(synth,cfg):
-    freq = cfg.filter_f + cfg.filter_mod
+    freq = cfg.filter_f + cfg.filter_fmod
     if cfg.filter_type == 'lpf':
         filter = synth.low_pass_filter(freq, cfg.filter_q)
     elif cfg.filter_type == 'hpf':
@@ -49,6 +54,13 @@ def make_filter(synth,cfg):
         print("unknown filter type", cfg.filter_type)
     return filter
 
+class SynthConfig():
+    def __init__(self):
+        self.filter_type = 'lpf'
+        self.filter_f = 2000
+        self.filter_q = 0.7
+        self.filter_fmod = 500
+        self.wave_type = 'saw'  # 'sin' or 'saw' or 'squ'
 
 class MyLittleDroney():
     """
@@ -56,21 +68,28 @@ class MyLittleDroney():
     """
     def __init__(self, synth, synth_config, num_voices, oscs_per_voice):
         self.voices = []
+        self.synth = synth
+        self.cfg = synth_config
         for i in range(num_voices):
             oscs = []
             freqs = get_freqs_by_knobs(127,0)  # fake values
-            wave = get_wave(synth_config.wave_type)
+            wave = get_wave(self.cfg.wave_type)
             
             for j in range(oscs_per_voice):
                 f = freqs[j]
-                pitch_lfo = synthio.LFO(rate=0.1, scale=0.02, phase_offset=random.uniform(0,1))
+                pitch_lfo = synthio.LFO(rate=0.1, scale=0.01, phase_offset=random.uniform(0,1))
                 osc = synthio.Note(frequency=f, waveform=wave,
                                    bend=pitch_lfo,
-                                   filter=make_filter(synth,synth_config))
+                                   filter = make_filter(self.synth,self.cfg))
                 synth.press(osc)
                 oscs.append(osc)
             self.voices.append(oscs)
 
+    # def update(self):
+    #     for voice in self.voices:
+    #         for osc in voice:
+    #             osc.filter = make_filter(self.synth,self.cfg)
+                
     def set_voice_freqs(self,n,freqs):
         for i,osc in enumerate(self.voices[n]):
             osc.frequency = freqs[i]
