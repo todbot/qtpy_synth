@@ -19,14 +19,10 @@ import usb_midi
 
 from qtpy_synth.hardware import Hardware
 from qtpy_synth.synthio_instrument import WavePolyTwoOsc, Patch, FiltType
-import qtpy_synth.winterbloom_smolmidi as smolmidi
+#import qtpy_synth.winterbloom_smolmidi as smolmidi
+import tmidi
 
 from wavesynth_display import WavesynthDisplay
-
-import microcontroller
-microcontroller.cpu.frequency = 250_000_000
-
-time.sleep(2)  # let USB settle down
 
 touch_midi_notes = [40, 48, 52, 55] # can be float
 
@@ -36,7 +32,7 @@ patch3 = Patch('three')
 patch4 = Patch('fourfor')
 patches = (patch1, patch2, patch3, patch4)
 
-patch1.filt_env_params.attack_time = 0.1
+patch1.filt_env_params.attack_time = 0.5
 patch1.amp_env_params.attack_time = 0.01
 
 patch2.filt_type = FiltType.HP
@@ -61,8 +57,8 @@ inst = WavePolyTwoOsc(qts.synth, patch4)
 wavedisp = WavesynthDisplay(qts.display, inst.patch)
 
 # let's get the midi going
-midi_usb_in = smolmidi.MidiIn(usb_midi.ports[0])
-midi_uart_in = smolmidi.MidiIn(qts.midi_uart)
+midi_usb = tmidi.MIDI(midi_in=usb_midi.ports[0], midi_out=usb_midi.ports[1])
+midi_uart = tmidi.MIDI(midi_in=qts.midi_uart)
 
 def map_range(s, a1, a2, b1, b2):  return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
 
@@ -80,21 +76,19 @@ async def display_updater():
 
 async def midi_handler():
     while True:
-        while msg := midi_usb_in.receive() or midi_uart_in.receive():
-            if msg.type == smolmidi.NOTE_ON:
-                inst.note_on(msg.data[0])
+        while msg := midi_usb.receive() or midi_uart.receive():
+            
+            if msg.type == tmidi.NOTE_ON:
+                inst.note_on(msg.note)
                 qts.led.fill(0xff00ff)
-            elif msg.type == smolmidi.NOTE_OFF:
-                inst.note_off(msg.data[0])
+            elif msg.type == tmidi.NOTE_OFF:
+                inst.note_off(msg.note)
                 qts.led.fill(0x000000)
-            elif msg.type == smolmidi.CC:
-                ccnum = msg.data[0]
-                ccval = msg.data[1]
-                qts.led.fill(ccval)
+            elif msg.type == tmidi.CC:
+                ccnum = msg.data0
+                ccval = msg.data1
                 if ccnum == 71:  # "sound controller 1"
-                    new_wave_mix = ccval/127
-                    print("wave_mix:", new_wave_mix)
-                    inst.patch.wave_mix = new_wave_mix
+                    inst.patch.wave_mix = ccval/127
                 elif ccnum == 1: # mod wheel
                     inst.patch.wave_mix_lfo_amount = ccval/127 * 50
                     #inst.patch.wave_mix_lfo_rate = msg.value/127 * 5
@@ -156,6 +150,7 @@ async def input_handler():
                         qts.led.fill(0xff00ff)
                         midi_note = touch_midi_notes[touch.key_number]
                         inst.note_on(midi_note)
+                        midi_usb.send(tmidi.Message(tmidi.NOTE_ON, midi_note, 127))
 
                 if touch.released:
                     if key_with_touch:
@@ -164,6 +159,7 @@ async def input_handler():
                         qts.led.fill(0)
                         midi_note = touch_midi_notes[touch.key_number]
                         inst.note_off(midi_note)
+                        midi_usb.send(tmidi.Message(tmidi.NOTE_OFF, midi_note, 0))
 
         # KEY input
         if key := qts.check_key():

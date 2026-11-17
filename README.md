@@ -5,7 +5,7 @@ synth to experiment with [`synthio`](https://github.com/todbot/circuitpython-syn
 
 <img width=500 src="./docs/qtpy_synth_case1.jpg">
 
-<a href="https://www.tindie.com/stores/todbot/qtpy_synth?ref=offsite_badges&utm_source=sellers_todbot&utm_medium=badges&utm_campaign=badge_small"><img src="https://d2ss6ovg47m0r5.cloudfront.net/badges/tindie-smalls.png" alt="I sell on Tindie" width="100" height="26"></a>
+[![Find todbot synth toys on SmallRun](https://smallrun.net/brand/badge.png?style=i-sell-on)](https://smallrun.net/shop/todbot)
 
 ### Features
  - Mono audio output circuit, converting PWM to audio, as per [RP2040 design guidelines](https://datasheets.raspberrypi.com/rp2040/hardware-design-with-rp2040.pdf#page=24)
